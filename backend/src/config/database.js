@@ -28,10 +28,10 @@ const connectDB = async () => {
     await sequelize.authenticate();
     logger.info('✅ Database connection established successfully');
     
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      logger.info('📊 Database models synchronized');
-    }
+    // Initialize models and associations
+    const { syncDatabase } = require('../models');
+    await syncDatabase();
+    
   } catch (error) {
     logger.error('❌ Unable to connect to the database:', error);
     throw error;

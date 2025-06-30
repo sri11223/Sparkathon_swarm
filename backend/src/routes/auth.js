@@ -1,60 +1,67 @@
 const express = require('express');
 const router = express.Router();
+const AuthController = require('../controllers/authController');
+const { authenticate } = require('../middleware/auth');
+const {
+  validateUserRegistration,
+  validateUserLogin,
+  validateUUID
+} = require('../middleware/validation');
+const { body } = require('express-validator');
 
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-router.post('/register', (req, res) => {
-  res.json({
-    success: true,
-    message: 'User registration endpoint',
-    data: {
-      token: 'sample_jwt_token',
-      user: {
-        id: 1,
-        email: 'user@example.com',
-        role: 'customer'
-      }
-    }
-  });
-});
+router.post('/register', validateUserRegistration, AuthController.register);
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', (req, res) => {
-  res.json({
-    success: true,
-    message: 'User login endpoint',
-    data: {
-      token: 'sample_jwt_token',
-      user: {
-        id: 1,
-        email: 'user@example.com',
-        role: 'customer'
-      }
-    }
-  });
-});
+router.post('/login', validateUserLogin, AuthController.login);
 
-// @desc    Logout user
-// @route   POST /api/auth/logout
-// @access  Private
-router.post('/logout', (req, res) => {
-  res.json({
-    success: true,
-    message: 'User logout endpoint'
-  });
-});
+// @desc    Verify email
+// @route   GET /api/auth/verify-email/:token
+// @access  Public
+router.get('/verify-email/:token', AuthController.verifyEmail);
 
-// @desc    Forgot password
+// @desc    Request password reset
 // @route   POST /api/auth/forgot-password
 // @access  Public
-router.post('/forgot-password', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Forgot password endpoint'
-  });
-});
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email address')
+], AuthController.requestPasswordReset);
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password/:token
+// @access  Public
+router.post('/reset-password/:token', [
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
+], AuthController.resetPassword);
+
+// @desc    Change password
+// @route   POST /api/auth/change-password
+// @access  Private
+router.post('/change-password', authenticate, [
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
+], AuthController.changePassword);
+
+// @desc    Refresh token
+// @route   POST /api/auth/refresh-token
+// @access  Private
+router.post('/refresh-token', authenticate, AuthController.refreshToken);
+
+// @desc    Get current user profile
+// @route   GET /api/auth/profile
+// @access  Private
+router.get('/profile', authenticate, AuthController.getProfile);
 
 module.exports = router;

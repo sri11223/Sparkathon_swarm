@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: swarmfill_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: swarmfill_db
+      POSTGRES_USER: swarmfill_user
+      POSTGRES_PASSWORD: swarmfill123
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d/
+    networks:
+      - swarmfill_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: swarmfill_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - swarmfill_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: swarmfill_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@swarmfill.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - swarmfill_network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  swarmfill_network:
+    driver: bridge

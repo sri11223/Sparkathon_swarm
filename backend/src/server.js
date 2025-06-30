@@ -8,12 +8,14 @@ require('dotenv').config();
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
 const { connectDB } = require('./config/database');
+const { syncDatabase } = require('./models');
 const socketManager = require('./services/socketManager');
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const hubRoutes = require('./routes/hubs');
+const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const routeRoutes = require('./routes/routes');
 const aiRoutes = require('./routes/ai');
@@ -63,6 +65,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hubs', hubRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/ai', aiRoutes);
@@ -85,6 +88,10 @@ const startServer = async () => {
     // Connect to database
     await connectDB();
     logger.info('Database connected successfully');
+
+    // Sync database models
+    await syncDatabase();
+    logger.info('Database models synchronized');
 
     // Start server
     const server = app.listen(PORT, () => {
