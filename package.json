@@ -1,0 +1,62 @@
+{
+  "name": "swarmfill-network",
+  "version": "1.0.0",
+  "description": "SwarmFill Network + SmartLoad AI - Walmart Sparkathon 2025",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "npm run install-backend && npm run install-frontend && npm run install-ai",
+    "install-backend": "cd backend && npm install",
+    "install-frontend": "cd frontend/customer-mobile-app && npm install && cd ../hubowner-mobile-app && npm install && cd ../courier-mobile-app && npm install && cd ../admin-web-dashboard && npm install",
+    "install-ai": "cd ai-services && pip install -r requirements.txt",
+    "dev-backend": "cd backend && npm run dev",
+    "dev-frontend": "cd frontend/admin-web-dashboard && npm start",
+    "dev-customer-app": "cd frontend/customer-mobile-app && expo start",
+    "dev-hubowner-app": "cd frontend/hubowner-mobile-app && expo start",
+    "dev-courier-app": "cd frontend/courier-mobile-app && expo start",
+    "dev-ai": "cd ai-services && python app.py",
+    "build-frontend": "cd frontend/admin-web-dashboard && npm run build",
+    "test": "npm run test-backend && npm run test-frontend",
+    "test-backend": "cd backend && npm test",
+    "test-frontend": "cd frontend/admin-web-dashboard && npm test",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "format": "prettier --write .",
+    "setup-dev": "npm run install-all && npm run setup-db",
+    "setup-db": "cd database && node setup.js",
+    "demo": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\" \"npm run dev-ai\"",
+    "deploy-demo": "npm run build-frontend && npm run deploy-aws"
+  },
+  "keywords": [
+    "supply-chain",
+    "last-mile-delivery",
+    "ai-optimization",
+    "community-fulfillment",
+    "walmart-sparkathon",
+    "micro-fulfillment",
+    "warehouse-optimization",
+    "route-optimization"
+  ],
+  "author": "SwarmFill Team - Engineering Students",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sri11223/Sparkathon_swarm.git"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "eslint": "^8.45.0",
+    "prettier": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "workspaces": [
+    "backend",
+    "frontend/customer-mobile-app",
+    "frontend/hubowner-mobile-app", 
+    "frontend/courier-mobile-app",
+    "frontend/admin-web-dashboard"
+  ]
+}
