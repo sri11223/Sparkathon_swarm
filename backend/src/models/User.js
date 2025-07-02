@@ -18,6 +18,18 @@ module.exports = (sequelize) => {
         foreignKey: 'courier_id',
         as: 'deliveries'
       });
+      User.hasMany(models.CourierVehicle, {
+        foreignKey: 'courier_id',
+        as: 'vehicles'
+      });
+      User.hasMany(models.UserRating, {
+        foreignKey: 'rater_user_id',
+        as: 'given_ratings'
+      });
+      User.hasMany(models.UserRating, {
+        foreignKey: 'ratee_user_id',
+        as: 'received_ratings'
+      });
     }
   }
 
@@ -62,6 +74,11 @@ module.exports = (sequelize) => {
       validate: {
         isIn: [['customer', 'hub_owner', 'courier', 'admin']],
       },
+    },
+    background_check_status: {
+      type: DataTypes.ENUM('not_started', 'pending', 'passed', 'failed'),
+      allowNull: true,
+      defaultValue: 'not_started'
     },
   }, {
     sequelize,

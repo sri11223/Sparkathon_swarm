@@ -13,6 +13,10 @@ module.exports = (sequelize) => {
         foreignKey: 'courier_id',
         as: 'courier'
       });
+      Delivery.belongsTo(models.CourierVehicle, {
+        foreignKey: 'vehicle_id',
+        as: 'vehicle'
+      });
     }
   }
 
