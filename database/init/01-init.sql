@@ -1,157 +1,95 @@
--- Initialize SwarmFill Database
--- This script sets up the basic database structure and extensions
+-- Enable PostGIS extension for geographic data types
+CREATE EXTENSION IF NOT EXISTS postgis;
 
--- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis" SCHEMA public;
+-- USERS Table: Stores all user types (customers, hub owners, couriers, admins)
+CREATE TABLE IF NOT EXISTS users (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(20) UNIQUE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'hub_owner', 'courier', 'admin')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Create custom types/enums (these will be managed by Sequelize, but useful for reference)
--- User types
--- DO $$ BEGIN
---     CREATE TYPE user_type_enum AS ENUM ('customer', 'hubowner', 'courier', 'admin');
--- EXCEPTION
---     WHEN duplicate_object THEN null;
--- END $$;
+-- HUBS Table: Represents community micro-warehouses
+CREATE TABLE IF NOT EXISTS hubs (
+    hub_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(user_id),
+    name VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    location GEOGRAPHY(POINT, 4326), -- Stores longitude and latitude
+    capacity_m3 NUMERIC(10, 2) NOT NULL,
+    current_utilization_m3 NUMERIC(10, 2) DEFAULT 0,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'active', 'inactive', 'crisis_mode')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Vehicle types
--- DO $$ BEGIN
---     CREATE TYPE vehicle_type_enum AS ENUM ('bike', 'car', 'van', 'truck');
--- EXCEPTION
---     WHEN duplicate_object THEN null;
--- END $$;
+-- PRODUCTS Table: Catalog of all products available in the network
+CREATE TABLE IF NOT EXISTS products (
+    product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku VARCHAR(50) UNIQUE NOT NULL, -- Walmart SKU
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price NUMERIC(10, 2) NOT NULL,
+    volume_m3 NUMERIC(10, 4) NOT NULL, -- Volume in cubic meters
+    image_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Order status
--- DO $$ BEGIN
---     CREATE TYPE order_status_enum AS ENUM ('pending', 'confirmed', 'preparing', 'ready_pickup', 'in_transit', 'delivered', 'cancelled');
--- EXCEPTION
---     WHEN duplicate_object THEN null;
--- END $$;
+-- HUB_INVENTORY Table: Join table for products in hubs
+CREATE TABLE IF NOT EXISTS hub_inventory (
+    hub_id UUID NOT NULL REFERENCES hubs(hub_id),
+    product_id UUID NOT NULL REFERENCES products(product_id),
+    quantity INT NOT NULL CHECK (quantity >= 0),
+    available_quantity INT NOT NULL CHECK (available_quantity >= 0),
+    last_stocked_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (hub_id, product_id)
+);
 
--- Payment status
--- DO $$ BEGIN
---     CREATE TYPE payment_status_enum AS ENUM ('pending', 'paid', 'failed', 'refunded');
--- EXCEPTION
---     WHEN duplicate_object THEN null;
--- END $$;
+-- ORDERS Table: Tracks customer orders
+CREATE TABLE IF NOT EXISTS orders (
+    order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL REFERENCES users(user_id),
+    hub_id UUID NOT NULL REFERENCES hubs(hub_id),
+    status VARCHAR(30) NOT NULL CHECK (status IN ('pending', 'confirmed', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled')),
+    order_type VARCHAR(20) NOT NULL CHECK (order_type IN ('delivery', 'drive_thru_pickup')),
+    total_price NUMERIC(10, 2) NOT NULL,
+    pickup_code VARCHAR(10), -- For Drive-Thru security
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Hub types
--- DO $$ BEGIN
---     CREATE TYPE hub_type_enum AS ENUM ('warehouse', 'retail', 'pickup_point');
--- EXCEPTION
---     WHEN duplicate_object THEN null;
--- END $$;
+-- ORDER_ITEMS Table: Join table for products in orders
+CREATE TABLE IF NOT EXISTS order_items (
+    order_id UUID NOT NULL REFERENCES orders(order_id),
+    product_id UUID NOT NULL REFERENCES products(product_id),
+    quantity INT NOT NULL CHECK (quantity > 0),
+    price_per_unit NUMERIC(10, 2) NOT NULL,
+    PRIMARY KEY (order_id, product_id)
+);
 
--- Create indexes for better performance (will be created by Sequelize migrations)
--- These are just for reference
+-- DELIVERIES Table: Manages the last-mile delivery leg of an order
+CREATE TABLE IF NOT EXISTS deliveries (
+    delivery_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES orders(order_id),
+    courier_id UUID REFERENCES users(user_id),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'accepted', 'in_progress', 'completed', 'failed')),
+    start_location GEOGRAPHY(POINT, 4326),
+    end_location GEOGRAPHY(POINT, 4326),
+    picked_up_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    earnings NUMERIC(10, 2)
+);
 
--- User indexes
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users(email);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_type ON users(user_type);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_location ON users USING GIST(ST_MakePoint(longitude, latitude));
-
--- Hub indexes
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_hubs_owner ON hubs(owner_id);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_hubs_location ON hubs USING GIST(ST_MakePoint(longitude, latitude));
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_hubs_active ON hubs(is_active);
-
--- Order indexes
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_customer ON orders(customer_id);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_courier ON orders(courier_id);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_status ON orders(status);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_date ON orders(order_date);
-
--- Inventory indexes
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_hub_product ON inventory(hub_id, product_id);
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_inventory_available ON inventory(is_available);
-
--- Create functions for common operations
-
--- Function to calculate distance between two points
-CREATE OR REPLACE FUNCTION calculate_distance(
-    lat1 DECIMAL, lon1 DECIMAL, 
-    lat2 DECIMAL, lon2 DECIMAL
-) RETURNS DECIMAL AS $$
-BEGIN
-    RETURN (
-        6371 * acos(
-            cos(radians(lat1)) * 
-            cos(radians(lat2)) * 
-            cos(radians(lon2) - radians(lon1)) + 
-            sin(radians(lat1)) * 
-            sin(radians(lat2))
-        )
-    );
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- Function to find nearby hubs
-CREATE OR REPLACE FUNCTION find_nearby_hubs(
-    user_lat DECIMAL, 
-    user_lon DECIMAL, 
-    radius_km DECIMAL DEFAULT 10
-) RETURNS TABLE(
-    hub_id UUID,
-    hub_name VARCHAR,
-    distance_km DECIMAL
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        h.id,
-        h.name,
-        calculate_distance(user_lat, user_lon, h.latitude, h.longitude) as distance
-    FROM hubs h
-    WHERE 
-        h.is_active = true
-        AND calculate_distance(user_lat, user_lon, h.latitude, h.longitude) <= radius_km
-    ORDER BY distance;
-END;
-$$ LANGUAGE plpgsql STABLE;
-
--- Function to update courier rating
-CREATE OR REPLACE FUNCTION update_courier_rating(
-    courier_uuid UUID,
-    new_rating DECIMAL
-) RETURNS VOID AS $$
-DECLARE
-    current_rating DECIMAL;
-    current_deliveries INTEGER;
-    new_average DECIMAL;
-BEGIN
-    SELECT rating, total_deliveries 
-    INTO current_rating, current_deliveries
-    FROM users 
-    WHERE id = courier_uuid AND user_type = 'courier';
-    
-    IF current_deliveries = 0 THEN
-        new_average := new_rating;
-    ELSE
-        new_average := ((current_rating * current_deliveries) + new_rating) / (current_deliveries + 1);
-    END IF;
-    
-    UPDATE users 
-    SET 
-        rating = new_average,
-        total_deliveries = current_deliveries + 1
-    WHERE id = courier_uuid;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to automatically update timestamps
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO swarmfill_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO swarmfill_user;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO swarmfill_user;
-
--- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO swarmfill_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO swarmfill_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO swarmfill_user;
+-- Create indexes for foreign keys and frequently queried columns
+CREATE INDEX IF NOT EXISTS idx_hubs_owner_id ON hubs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_hubs_location ON hubs USING GIST (location);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_hub_id ON orders(hub_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_order_id ON deliveries(order_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_courier_id ON deliveries(courier_id);
