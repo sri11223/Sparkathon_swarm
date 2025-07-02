@@ -1,4 +1,5 @@
 const { Model, DataTypes } = require('sequelize');
+const bcrypt = require('bcryptjs');
 
 module.exports = (sequelize) => {
   class User extends Model {
@@ -30,6 +31,20 @@ module.exports = (sequelize) => {
         foreignKey: 'ratee_user_id',
         as: 'received_ratings'
       });
+    }
+
+    // Instance method to validate password
+    async validatePassword(password) {
+      return await bcrypt.compare(password, this.password_hash);
+    }
+
+    // Override toJSON to exclude sensitive fields
+    toJSON() {
+      const user = { ...this.get() };
+      delete user.password_hash;
+      delete user.email_verification_token;
+      delete user.password_reset_token;
+      return user;
     }
   }
 
@@ -80,6 +95,36 @@ module.exports = (sequelize) => {
       allowNull: true,
       defaultValue: 'not_started'
     },
+    is_email_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    email_verification_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    email_verification_expires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    password_reset_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    password_reset_expires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+    },
+    last_login: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   }, {
     sequelize,
     modelName: 'User',
@@ -87,6 +132,20 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    hooks: {
+      beforeCreate: async (user) => {
+        if (user.password_hash) {
+          const salt = await bcrypt.genSalt(10);
+          user.password_hash = await bcrypt.hash(user.password_hash, salt);
+        }
+      },
+      beforeUpdate: async (user) => {
+        if (user.changed('password_hash')) {
+          const salt = await bcrypt.genSalt(10);
+          user.password_hash = await bcrypt.hash(user.password_hash, salt);
+        }
+      }
+    }
   });
 
   return User;

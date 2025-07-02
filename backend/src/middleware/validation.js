@@ -28,14 +28,23 @@ const validateUserRegistration = [
     .withMessage('Password must be at least 8 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
-  body('full_name')
+  body('first_name')
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Full name must be between 2 and 100 characters'),
-  body('user_type')
-    .isIn(['customer', 'hubowner', 'courier', 'admin'])
-    .withMessage('Invalid user type'),
-  body('phone')
+    .isLength({ min: 2, max: 50 })
+    .withMessage('First name must be between 2 and 50 characters'),
+  body('last_name')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Last name must be between 2 and 50 characters'),
+  body('middle_name')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Middle name must not exceed 50 characters'),
+  body('role')
+    .isIn(['customer', 'hub_owner', 'courier', 'admin'])
+    .withMessage('Invalid user role'),
+  body('phone_number')
     .optional()
     .matches(/^[\+]?[1-9][\d]{0,15}$/)
     .withMessage('Please provide a valid phone number'),
@@ -59,20 +68,25 @@ const validateUserUpdate = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
-  body('full_name')
+  body('first_name')
     .optional()
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Full name must be between 2 and 100 characters'),
-  body('phone')
+    .isLength({ min: 2, max: 50 })
+    .withMessage('First name must be between 2 and 50 characters'),
+  body('last_name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Last name must be between 2 and 50 characters'),
+  body('middle_name')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Middle name must not exceed 50 characters'),
+  body('phone_number')
     .optional()
     .matches(/^[\+]?[1-9][\d]{0,15}$/)
     .withMessage('Please provide a valid phone number'),
-  body('address')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Address must not exceed 500 characters'),
   handleValidationErrors
 ];
 

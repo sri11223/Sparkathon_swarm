@@ -11,12 +11,11 @@ class AuthController {
       const {
         email,
         password,
-        full_name,
-        phone,
-        user_type,
-        address,
-        latitude,
-        longitude,
+        first_name,
+        last_name,
+        middle_name,
+        phone_number,
+        role,
         vehicle_type,
         license_number
       } = req.body;
@@ -33,39 +32,37 @@ class AuthController {
       // Generate verification token
       const verification_token = crypto.randomBytes(32).toString('hex');
 
-      // Create user
+      // Create user data matching the database schema
       const userData = {
         email,
         password_hash: password, // Will be hashed by model hook
-        full_name,
-        phone,
-        user_type,
-        address,
-        latitude,
-        longitude,
-        verification_token
+        first_name,
+        last_name,
+        middle_name,
+        phone_number,
+        role,
+        email_verification_token: verification_token,
+        email_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        is_email_verified: false
       };
 
-      // Add courier-specific fields
-      if (user_type === 'courier') {
-        userData.vehicle_type = vehicle_type;
-        userData.license_number = license_number;
-      }
+      // Add courier-specific fields if needed (these would be in a separate CourierVehicle table)
+      // For now, we'll skip vehicle_type and license_number as they're not in the User model
 
       const user = await User.create(userData);
 
       // Send verification email
       try {
-        await sendVerificationEmail(user.email, user.full_name, verification_token);
+        await sendVerificationEmail(user.email, `${user.first_name} ${user.last_name}`, verification_token);
       } catch (emailError) {
         logger.error('Failed to send verification email:', emailError);
         // Don't fail registration if email fails
       }
 
       // Generate JWT token
-      const token = generateToken(user.id);
+      const token = generateToken(user.user_id); // Use user_id instead of id
 
-      logger.info(`New user registered: ${user.email} (${user.user_type})`);
+      logger.info(`New user registered: ${user.email} (${user.role})`);
 
       res.status(201).json({
         success: true,
@@ -108,8 +105,9 @@ class AuthController {
         });
       }
 
-      // Validate password
+      // Validate password using bcrypt
       const isValidPassword = await user.validatePassword(password);
+      
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
@@ -121,7 +119,7 @@ class AuthController {
       await user.update({ last_login: new Date() });
 
       // Generate JWT token
-      const token = generateToken(user.id);
+      const token = generateToken(user.user_id);
 
       logger.info(`User logged in: ${user.email}`);
 
@@ -149,7 +147,15 @@ class AuthController {
     try {
       const { token } = req.params;
 
-      const user = await User.findOne({ where: { verification_token: token } });
+      const user = await User.findOne({ 
+        where: { 
+          email_verification_token: token,
+          email_verification_expires: {
+            [require('sequelize').Op.gt]: new Date()
+          }
+        } 
+      });
+      
       if (!user) {
         return res.status(400).json({
           success: false,
@@ -159,8 +165,9 @@ class AuthController {
 
       // Update user as verified
       await user.update({
-        is_verified: true,
-        verification_token: null
+        is_email_verified: true,
+        email_verification_token: null,
+        email_verification_expires: null
       });
 
       logger.info(`Email verified for user: ${user.email}`);
@@ -202,13 +209,13 @@ class AuthController {
       const reset_expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       await user.update({
-        reset_password_token: reset_token,
-        reset_password_expires: reset_expires
+        password_reset_token: reset_token,
+        password_reset_expires: reset_expires
       });
 
       // Send password reset email
       try {
-        await sendPasswordResetEmail(user.email, user.full_name, reset_token);
+        await sendPasswordResetEmail(user.email, `${user.first_name} ${user.last_name}`, reset_token);
       } catch (emailError) {
         logger.error('Failed to send password reset email:', emailError);
         return res.status(500).json({
@@ -242,9 +249,9 @@ class AuthController {
 
       const user = await User.findOne({
         where: {
-          reset_password_token: token,
-          reset_password_expires: {
-            $gt: new Date()
+          password_reset_token: token,
+          password_reset_expires: {
+            [require('sequelize').Op.gt]: new Date()
           }
         }
       });
@@ -259,8 +266,8 @@ class AuthController {
       // Update password and clear reset tokens
       await user.update({
         password_hash: password, // Will be hashed by model hook
-        reset_password_token: null,
-        reset_password_expires: null
+        password_reset_token: null,
+        password_reset_expires: null
       });
 
       logger.info(`Password reset completed for user: ${user.email}`);
@@ -321,7 +328,7 @@ class AuthController {
       const user = req.user;
 
       // Generate new token
-      const token = generateToken(user.id);
+      const token = generateToken(user.user_id);
 
       res.json({
         success: true,

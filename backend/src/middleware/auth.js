@@ -31,7 +31,8 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     const decoded = verifyToken(token);
     
-    const user = await User.findByPk(decoded.userId);
+    // Use user_id instead of id to match the database schema
+    const user = await User.findOne({ where: { user_id: decoded.userId } });
     if (!user || !user.is_active) {
       return res.status(401).json({
         success: false,

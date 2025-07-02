@@ -39,6 +39,33 @@ Authorization: Bearer <your_jwt_token>
 | ✅ | `POST` | `/refresh-token` | Refresh JWT token | Private |
 | ✅ | `GET` | `/profile` | Get current user profile | Private |
 
+**✅ ALL AUTHENTICATION ENDPOINTS ARE NOW FULLY FUNCTIONAL AND READY TO USE!**
+
+### Request/Response Examples:
+
+#### Register User
+```json
+POST /api/auth/register
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!",
+  "first_name": "John",
+  "last_name": "Doe",
+  "middle_name": "Michael",
+  "phone_number": "+1234567890",
+  "role": "customer"
+}
+```
+
+#### Login User
+```json
+POST /api/auth/login
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!"
+}
+```
+
 ---
 
 ## 👥 User Management ⚠️
