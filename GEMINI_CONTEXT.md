@@ -22,12 +22,13 @@ The overall goal is to create a system that dramatically cuts delivery costs and
 1.  **Hyper-Personalized Hubs:** Instead of just storing popular items, the AI will analyze local buying patterns from nearby Walmart stores to stock hubs with hyper-relevant products. The "Community Curation" feature will suggest a "starter inventory" for new hubs based on local demographics and purchase history.
 2.  **"Drive-Thru" Hubs & In-Store Integration:** The platform will introduce new, convenient delivery options. "Drive-Thru" Hubs will allow customers to pick up orders directly from a hub owner's home. The platform will also integrate with Walmart's existing stores, allowing for in-store returns of items purchased from a hub.
 
-## Next Steps
+## Backend Setup
 
-Our current focus is on implementing the "Hyper-Personalized Hubs" and "Drive-Thru" Hubs & In-Store Integration" features. We have already updated the `README.md` to reflect this new vision. The next step is to decide which part of the implementation to tackle first: the backend, the frontend, or the AI model.
+We have successfully set up the foundational backend infrastructure using Docker Compose.
 
-## Troubleshooting Docker
-
-We are currently troubleshooting a Docker installation issue. The `docker` command is not being recognized, and we suspect the Docker daemon is not running.
-
-**Last action:** I have advised the user to restart their computer and ensure the Docker Desktop application is running before we proceed.
+- **Services:** A `docker-compose.yml` file defines and configures the core services:
+    - `postgres`: A PostGIS-enabled PostgreSQL database for data storage.
+    - `redis`: For caching and session management.
+    - `pgadmin`: A web-based administration tool for the PostgreSQL database.
+- **Database Schema:** The initial database schema has been created via a SQL script (`database/init/01-init.sql`). It includes tables for users, hubs, products, inventory, orders, and deliveries, with PostGIS enabled for geospatial queries.
+- **Next Steps:** With the database and services running, the next step is to build out the backend API endpoints to interact with the database. We will begin by creating the models and controllers for the `users` and `hubs` entities.

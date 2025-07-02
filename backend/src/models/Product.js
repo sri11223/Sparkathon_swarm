@@ -1,107 +1,62 @@
-const { DataTypes } = require('sequelize');
+const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  const Product = sequelize.define('Product', {
-    id: {
+  class Product extends Model {
+    static associate(models) {
+      // A product can be in many hubs
+      Product.belongsToMany(models.Hub, {
+        through: 'hub_inventory',
+        foreignKey: 'product_id',
+        otherKey: 'hub_id',
+        as: 'hubs'
+      });
+      // A product can be part of many orders
+      Product.belongsToMany(models.Order, {
+        through: 'order_items',
+        foreignKey: 'product_id',
+        otherKey: 'order_id',
+        as: 'orders'
+      });
+    }
+  }
+
+  Product.init({
+    product_id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        len: [1, 255]
-      }
-    },
-    description: {
-      type: DataTypes.TEXT
-    },
-    category: {
-      type: DataTypes.STRING(100),
+      primaryKey: true,
       allowNull: false
-    },
-    subcategory: {
-      type: DataTypes.STRING(100)
-    },
-    brand: {
-      type: DataTypes.STRING(100)
-    },
-    barcode: {
-      type: DataTypes.STRING(50),
-      unique: true
     },
     sku: {
       type: DataTypes.STRING(50),
-      unique: true
+      allowNull: false,
+      unique: true,
     },
-    unit: {
-      type: DataTypes.STRING(20), // kg, liters, pieces, etc.
-      defaultValue: 'pieces'
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
     },
-    weight: {
-      type: DataTypes.DECIMAL(8, 3) // in kg
+    description: {
+      type: DataTypes.TEXT,
     },
-    dimensions: {
-      type: DataTypes.JSON, // {length, width, height} in cm
-      defaultValue: {}
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    volume_m3: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: false,
     },
     image_url: {
-      type: DataTypes.STRING(500)
+      type: DataTypes.TEXT,
     },
-    images: {
-      type: DataTypes.JSON,
-      defaultValue: []
-    },
-    tags: {
-      type: DataTypes.JSON,
-      defaultValue: []
-    },
-    nutritional_info: {
-      type: DataTypes.JSON,
-      defaultValue: {}
-    },
-    is_perishable: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
-    },
-    shelf_life_days: {
-      type: DataTypes.INTEGER // days
-    },
-    storage_temperature: {
-      type: DataTypes.ENUM('frozen', 'refrigerated', 'room_temperature'),
-      defaultValue: 'room_temperature'
-    },
-    is_active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
-    },
-    created_by: {
-      type: DataTypes.UUID,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    }
   }, {
+    sequelize,
+    modelName: 'Product',
     tableName: 'products',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
-    indexes: [
-      {
-        name: 'idx_product_category',
-        fields: ['category', 'subcategory']
-      },
-      {
-        name: 'idx_product_barcode',
-        fields: ['barcode']
-      },
-      {
-        name: 'idx_product_search',
-        fields: ['name', 'brand']
-      }
-    ]
   });
 
   return Product;

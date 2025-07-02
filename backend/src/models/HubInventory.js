@@ -1,19 +1,20 @@
 const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  class OrderItem extends Model {
+  class HubInventory extends Model {
     static associate(models) {
       // No direct associations needed here as it's a through model.
+      // The associations are defined in the Hub and Product models.
     }
   }
 
-  OrderItem.init({
-    order_id: {
+  HubInventory.init({
+    hub_id: {
       type: DataTypes.UUID,
       primaryKey: true,
       references: {
-        model: 'orders',
-        key: 'order_id'
+        model: 'hubs',
+        key: 'hub_id'
       }
     },
     product_id: {
@@ -28,19 +29,26 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       validate: {
-        min: 1
+        min: 0
       }
     },
-    price_per_unit: {
-      type: DataTypes.DECIMAL(10, 2),
+    available_quantity: {
+      type: DataTypes.INTEGER,
       allowNull: false,
+      validate: {
+        min: 0
+      }
+    },
+    last_stocked_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
     }
   }, {
     sequelize,
-    modelName: 'OrderItem',
-    tableName: 'order_items',
-    timestamps: false,
+    modelName: 'HubInventory',
+    tableName: 'hub_inventory',
+    timestamps: false, // We have a manual timestamp `last_stocked_at`
   });
 
-  return OrderItem;
+  return HubInventory;
 };
