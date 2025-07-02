@@ -1,14 +1,26 @@
 const { Sequelize } = require('sequelize');
 const logger = require('../utils/logger');
+const path = require('path');
+const fs = require('fs');
+
+// Load database configuration
+const configPath = path.join(__dirname, '..', '..', 'config', 'config.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const env = process.env.NODE_ENV || 'development';
+const dbConfig = config[env];
+
+if (!dbConfig) {
+  throw new Error(`Database configuration for environment "${env}" not found.`);
+}
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'swarmfill_db',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || 'password',
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
   {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
+    host: dbConfig.host,
+    port: dbConfig.port,
+    dialect: dbConfig.dialect,
     logging: process.env.NODE_ENV === 'development' ? logger.info : false,
     pool: {
       max: 5,

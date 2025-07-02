@@ -1,15 +1,19 @@
+const { Server } = require('socket.io');
+const { createClient } = require('redis');
+const { createAdapter } = require('@socket.io/redis-adapter');
 const logger = require('../utils/logger');
 
 class SocketManager {
   constructor() {
     this.io = null;
-    this.connectedUsers = new Map(); // userId -> socketId
-    this.connectedCouriers = new Map(); // courierId -> socketId
-    this.connectedHubOwners = new Map(); // hubOwnerId -> socketId
+    // The connectedUsers maps are now less critical for messaging but still useful for tracking.
+    this.connectedUsers = new Map();
+    this.connectedCouriers = new Map();
+    this.connectedHubOwners = new Map();
   }
 
-  initialize(server) {
-    this.io = require('socket.io')(server, {
+  async initialize(server) {
+    this.io = new Server(server, {
       cors: {
         origin: process.env.FRONTEND_URLS?.split(',') || [
           'http://localhost:3000', 
@@ -20,6 +24,18 @@ class SocketManager {
         credentials: true
       }
     });
+
+    // --- REDIS CONFIGURATION ---
+    logger.info('🔌 Attempting to connect to Redis for Socket.IO adapter...');
+    const pubClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+    const subClient = pubClient.duplicate();
+
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    logger.info('✅ Redis clients connected successfully.');
+
+    this.io.adapter(createAdapter(pubClient, subClient));
+    logger.info('✅ Socket.IO Redis adapter configured.');
+    // --- END REDIS CONFIGURATION ---
 
     this.setupEventHandlers();
     logger.info('🔌 Socket.IO initialized successfully');
