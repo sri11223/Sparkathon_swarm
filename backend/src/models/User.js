@@ -95,6 +95,11 @@ module.exports = (sequelize) => {
       allowNull: true,
       defaultValue: 'not_started'
     },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+    },
     is_email_verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
