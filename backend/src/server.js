@@ -20,6 +20,7 @@ const orderRoutes = require('./routes/orders');
 const routeRoutes = require('./routes/routes');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
+const pickupRoutes = require('./routes/pickup');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -73,6 +74,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/pickup', pickupRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

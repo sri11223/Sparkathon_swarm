@@ -1770,17 +1770,1123 @@ curl -X GET http://localhost:3000/health
 
 ---
 
-## 🚫 **Missing Endpoints (Not Yet Implemented)**
+## 🚗 **Drive-Thru Pickup System Endpoints** ✅
 
-### Drive-Thru Pickup System ❌
-- `POST /api/pickup/drive-thru/book`
-- `GET /api/pickup/drive-thru/slots`
-- `PUT /api/pickup/drive-thru/notify`
-- `POST /api/pickup/drive-thru/confirm`
-- `GET /api/pickup/drive-thru/queue`
-- `POST /api/pickup/drive-thru/cancel`
-- `GET /api/pickup/drive-thru/history`
-- `PUT /api/pickup/drive-thru/rating`
+### 1. Enable Drive-Thru Service for Hub (Authenticated)
+**Endpoint:** `POST /api/pickup/drive-thru/enable`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+  "slot_duration_minutes": 15,
+  "slots_per_hour": 4,
+  "operating_hours": {
+    "monday": { "start": "09:00", "end": "18:00" },
+    "tuesday": { "start": "09:00", "end": "18:00" },
+    "wednesday": { "start": "09:00", "end": "18:00" },
+    "thursday": { "start": "09:00", "end": "18:00" },
+    "friday": { "start": "09:00", "end": "20:00" },
+    "saturday": { "start": "10:00", "end": "20:00" },
+    "sunday": { "start": "10:00", "end": "16:00" }
+  },
+  "max_advance_booking_days": 7,
+  "cancellation_deadline_minutes": 30
+}
+```
+
+#### Access Control:
+- **Only hub owners can enable drive-thru for their hubs**
+- **Admins can enable drive-thru for any hub**
+
+#### Expected Response (201):
+```json
+{
+  "success": true,
+  "message": "Drive-thru service enabled successfully",
+  "data": {
+    "configuration": {
+      "config_id": "dt-config-123456789",
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "slot_duration_minutes": 15,
+      "slots_per_hour": 4,
+      "operating_hours": {
+        "monday": { "start": "09:00", "end": "18:00" },
+        "tuesday": { "start": "09:00", "end": "18:00" },
+        "wednesday": { "start": "09:00", "end": "18:00" },
+        "thursday": { "start": "09:00", "end": "18:00" },
+        "friday": { "start": "09:00", "end": "20:00" },
+        "saturday": { "start": "10:00", "end": "20:00" },
+        "sunday": { "start": "10:00", "end": "16:00" }
+      },
+      "max_advance_booking_days": 7,
+      "cancellation_deadline_minutes": 30,
+      "is_active": true,
+      "created_at": "2025-07-04T10:00:00.000Z",
+      "updated_at": "2025-07-04T10:00:00.000Z"
+    },
+    "slots_generated": 252
+  }
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only enable drive-thru for your own hubs."
+}
+```
+
+#### Error Response for Already Enabled (400):
+```json
+{
+  "success": false,
+  "message": "Drive-thru service is already enabled for this hub"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/pickup/drive-thru/enable \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+    "slot_duration_minutes": 15,
+    "slots_per_hour": 4,
+    "operating_hours": {
+      "monday": { "start": "09:00", "end": "18:00" },
+      "tuesday": { "start": "09:00", "end": "18:00" },
+      "wednesday": { "start": "09:00", "end": "18:00" },
+      "thursday": { "start": "09:00", "end": "18:00" },
+      "friday": { "start": "09:00", "end": "20:00" },
+      "saturday": { "start": "10:00", "end": "20:00" },
+      "sunday": { "start": "10:00", "end": "16:00" }
+    },
+    "max_advance_booking_days": 7,
+    "cancellation_deadline_minutes": 30
+  }'
+```
+
+#### Real-time WebSocket Events:
+When drive-thru is enabled, the following event is emitted:
+- **Event:** `drive_thru_enabled`
+- **Room:** `hub_${hub_id}`
+- **Data:** `{ hub_id, configuration }`
+
+---
+
+### 2. Get Available Drive-Thru Slots
+**Endpoint:** `GET /api/pickup/drive-thru/slots`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+(No headers required for public endpoint)
+```
+
+#### Query Parameters:
+- `hub_id` (required) - Hub ID (UUID)
+- `date` (optional) - Date to check slots for (YYYY-MM-DD format, defaults to today)
+- `days` (optional) - Number of days to fetch slots for (default: 1, max: 7)
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Available slots retrieved successfully",
+  "data": {
+    "hub": {
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "name": "Downtown Hub",
+      "address": "123 Main St, City, State"
+    },
+    "configuration": {
+      "slot_duration_minutes": 15,
+      "cancellation_deadline_minutes": 30,
+      "max_advance_booking_days": 7
+    },
+    "available_slots": [
+      {
+        "slot_id": "slot-20250704-0900-001",
+        "start_time": "2025-07-04T09:00:00.000Z",
+        "end_time": "2025-07-04T09:15:00.000Z",
+        "is_available": true,
+        "day_of_week": "friday"
+      },
+      {
+        "slot_id": "slot-20250704-0915-002",
+        "start_time": "2025-07-04T09:15:00.000Z",
+        "end_time": "2025-07-04T09:30:00.000Z",
+        "is_available": true,
+        "day_of_week": "friday"
+      },
+      {
+        "slot_id": "slot-20250704-0930-003",
+        "start_time": "2025-07-04T09:30:00.000Z",
+        "end_time": "2025-07-04T09:45:00.000Z",
+        "is_available": false,
+        "day_of_week": "friday",
+        "booked_by": "customer_123"
+      }
+    ],
+    "summary": {
+      "total_slots": 36,
+      "available_slots": 35,
+      "booked_slots": 1
+    }
+  }
+}
+```
+
+#### Error Response for Drive-Thru Not Enabled (400):
+```json
+{
+  "success": false,
+  "message": "Drive-thru service is not enabled for this hub"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/slots?hub_id=456e7890-e89b-12d3-a456-426614174001&date=2025-07-04&days=2"
+```
+
+---
+
+### 3. Book Drive-Thru Slot (Authenticated)
+**Endpoint:** `POST /api/pickup/drive-thru/book`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "slot_id": "slot-20250704-0900-001",
+  "order_id": "ord12345-e89b-12d3-a456-426614174008",
+  "vehicle_info": {
+    "make": "Toyota",
+    "model": "Camry",
+    "color": "Blue",
+    "license_plate": "ABC123"
+  },
+  "special_instructions": "Please have order ready at pickup window"
+}
+```
+
+#### Expected Response (201):
+```json
+{
+  "success": true,
+  "message": "Drive-thru slot booked successfully",
+  "data": {
+    "booking": {
+      "slot_id": "slot-20250704-0900-001",
+      "customer_id": "123e4567-e89b-12d3-a456-426614174000",
+      "order_id": "ord12345-e89b-12d3-a456-426614174008",
+      "start_time": "2025-07-04T09:00:00.000Z",
+      "end_time": "2025-07-04T09:15:00.000Z",
+      "status": "booked",
+      "vehicle_info": {
+        "make": "Toyota",
+        "model": "Camry",
+        "color": "Blue",
+        "license_plate": "ABC123"
+      },
+      "special_instructions": "Please have order ready at pickup window",
+      "booking_reference": "DT-20250704-090001",
+      "booked_at": "2025-07-04T08:30:00.000Z"
+    },
+    "hub": {
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "name": "Downtown Hub",
+      "address": "123 Main St, City, State"
+    }
+  }
+}
+```
+
+#### Error Response for Slot Already Booked (400):
+```json
+{
+  "success": false,
+  "message": "This slot is no longer available"
+}
+```
+
+#### Error Response for Invalid Order (400):
+```json
+{
+  "success": false,
+  "message": "Order not found or does not belong to you"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/pickup/drive-thru/book \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "slot_id": "slot-20250704-0900-001",
+    "order_id": "ord12345-e89b-12d3-a456-426614174008",
+    "vehicle_info": {
+      "make": "Toyota",
+      "model": "Camry",
+      "color": "Blue",
+      "license_plate": "ABC123"
+    },
+    "special_instructions": "Please have order ready at pickup window"
+  }'
+```
+
+#### Real-time WebSocket Events:
+When a slot is booked, the following events are emitted:
+- **Event:** `drive_thru_slot_booked`
+- **Room:** `hub_${hub_id}` (for hub staff)
+- **Data:** `{ slot_id, customer_id, order_id, start_time, vehicle_info }`
+
+---
+
+### 4. Notify Customer for Pickup (Authenticated)
+**Endpoint:** `PUT /api/pickup/drive-thru/notify`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "slot_id": "slot-20250704-0900-001",
+  "notification_type": "order_ready",
+  "message": "Your order is ready for pickup. Please proceed to the drive-thru window.",
+  "estimated_wait_minutes": 2
+}
+```
+
+#### Valid Notification Types:
+- `order_ready` - Order is prepared and ready for pickup
+- `please_proceed` - Customer should proceed to drive-thru window
+- `delay_notification` - Pickup will be delayed
+- `custom_message` - Custom notification message
+
+#### Access Control:
+- **Only hub owners/staff can send notifications for their hubs**
+- **Admins can send notifications for any hub**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Customer notified successfully",
+  "data": {
+    "notification": {
+      "slot_id": "slot-20250704-0900-001",
+      "customer_id": "123e4567-e89b-12d3-a456-426614174000",
+      "notification_type": "order_ready",
+      "message": "Your order is ready for pickup. Please proceed to the drive-thru window.",
+      "estimated_wait_minutes": 2,
+      "sent_at": "2025-07-04T08:55:00.000Z",
+      "delivery_method": ["push_notification", "sms"]
+    },
+    "booking_details": {
+      "booking_reference": "DT-20250704-090001",
+      "start_time": "2025-07-04T09:00:00.000Z",
+      "vehicle_info": {
+        "make": "Toyota",
+        "model": "Camry",
+        "color": "Blue",
+        "license_plate": "ABC123"
+      }
+    }
+  }
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only notify customers for your hub's bookings."
+}
+```
+
+#### Error Response for Booking Not Found (404):
+```json
+{
+  "success": false,
+  "message": "Booking not found or not active"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X PUT http://localhost:3000/api/pickup/drive-thru/notify \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "slot_id": "slot-20250704-0900-001",
+    "notification_type": "order_ready",
+    "message": "Your order is ready for pickup. Please proceed to the drive-thru window.",
+    "estimated_wait_minutes": 2
+  }'
+```
+
+#### Real-time WebSocket Events:
+When a customer is notified, the following events are emitted:
+- **Event:** `drive_thru_customer_notified`
+- **Room:** `user_${customer_id}` (for customer)
+- **Data:** `{ slot_id, notification_type, message, estimated_wait_minutes }`
+
+---
+
+### 5. Confirm Pickup Completion (Authenticated)
+**Endpoint:** `POST /api/pickup/drive-thru/confirm`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "slot_id": "slot-20250704-0900-001",
+  "pickup_confirmed": true,
+  "actual_pickup_time": "2025-07-04T09:03:00.000Z",
+  "notes": "Order picked up successfully, customer was very satisfied"
+}
+```
+
+#### Access Control:
+- **Hub owners/staff can confirm pickups for their hubs**
+- **Customers can confirm their own pickups**
+- **Admins can confirm any pickup**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Pickup confirmed successfully",
+  "data": {
+    "pickup_confirmation": {
+      "slot_id": "slot-20250704-0900-001",
+      "booking_reference": "DT-20250704-090001",
+      "customer_id": "123e4567-e89b-12d3-a456-426614174000",
+      "order_id": "ord12345-e89b-12d3-a456-426614174008",
+      "scheduled_time": "2025-07-04T09:00:00.000Z",
+      "actual_pickup_time": "2025-07-04T09:03:00.000Z",
+      "status": "completed",
+      "pickup_duration_seconds": 120,
+      "notes": "Order picked up successfully, customer was very satisfied",
+      "confirmed_at": "2025-07-04T09:05:00.000Z",
+      "confirmed_by": "hub_staff"
+    },
+    "performance_metrics": {
+      "on_time_pickup": true,
+      "time_variance_minutes": 3,
+      "slot_utilization": "100%"
+    }
+  }
+}
+```
+
+#### Error Response for Already Confirmed (400):
+```json
+{
+  "success": false,
+  "message": "This pickup has already been confirmed"
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only confirm pickups for your bookings or hub."
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/pickup/drive-thru/confirm \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "slot_id": "slot-20250704-0900-001",
+    "pickup_confirmed": true,
+    "actual_pickup_time": "2025-07-04T09:03:00.000Z",
+    "notes": "Order picked up successfully, customer was very satisfied"
+  }'
+```
+
+#### Real-time WebSocket Events:
+When pickup is confirmed, the following events are emitted:
+- **Event:** `drive_thru_pickup_completed`
+- **Room:** `hub_${hub_id}` (for hub staff)
+- **Room:** `user_${customer_id}` (for customer)
+- **Data:** `{ slot_id, booking_reference, actual_pickup_time, status }`
+
+---
+
+### 6. Get Drive-Thru Queue Status
+**Endpoint:** `GET /api/pickup/drive-thru/queue`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Query Parameters:
+- `hub_id` (required) - Hub ID (UUID)
+- `date` (optional) - Date to check queue for (YYYY-MM-DD format, defaults to today)
+
+#### Access Control:
+- **Hub owners/staff can view queue for their hubs**
+- **Customers can view their position in queue**
+- **Admins can view any hub's queue**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Drive-thru queue retrieved successfully",
+  "data": {
+    "hub": {
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "name": "Downtown Hub"
+    },
+    "queue_status": {
+      "current_time": "2025-07-04T08:45:00.000Z",
+      "active_bookings": 5,
+      "completed_today": 12,
+      "average_pickup_time_minutes": 3.5,
+      "current_delays_minutes": 0
+    },
+    "upcoming_pickups": [
+      {
+        "slot_id": "slot-20250704-0900-001",
+        "booking_reference": "DT-20250704-090001",
+        "start_time": "2025-07-04T09:00:00.000Z",
+        "end_time": "2025-07-04T09:15:00.000Z",
+        "status": "notified",
+        "customer": {
+          "first_name": "John",
+          "last_name": "D."
+        },
+        "vehicle_info": {
+          "make": "Toyota",
+          "model": "Camry",
+          "color": "Blue",
+          "license_plate": "ABC123"
+        },
+        "order_summary": {
+          "order_id": "ord12345-e89b-12d3-a456-426614174008",
+          "item_count": 5,
+          "total_amount": 47.50
+        },
+        "minutes_until_pickup": 15
+      },
+      {
+        "slot_id": "slot-20250704-0915-002",
+        "booking_reference": "DT-20250704-091502",
+        "start_time": "2025-07-04T09:15:00.000Z",
+        "end_time": "2025-07-04T09:30:00.000Z",
+        "status": "booked",
+        "customer": {
+          "first_name": "Jane",
+          "last_name": "S."
+        },
+        "vehicle_info": {
+          "make": "Honda",
+          "model": "Civic",
+          "color": "Red",
+          "license_plate": "XYZ789"
+        },
+        "order_summary": {
+          "order_id": "ord67890-e89b-12d3-a456-426614174009",
+          "item_count": 3,
+          "total_amount": 23.75
+        },
+        "minutes_until_pickup": 30
+      }
+    ],
+    "performance_metrics": {
+      "on_time_percentage": 95.5,
+      "average_wait_time_minutes": 2.1,
+      "customer_satisfaction_rating": 4.8
+    }
+  }
+}
+```
+
+#### Customer-Specific Response (when accessed by customer):
+```json
+{
+  "success": true,
+  "message": "Your queue position retrieved successfully",
+  "data": {
+    "your_booking": {
+      "slot_id": "slot-20250704-0900-001",
+      "booking_reference": "DT-20250704-090001",
+      "start_time": "2025-07-04T09:00:00.000Z",
+      "status": "notified",
+      "position_in_queue": 1,
+      "estimated_wait_minutes": 15,
+      "special_instructions": "Please have order ready at pickup window"
+    },
+    "hub_info": {
+      "name": "Downtown Hub",
+      "current_delays_minutes": 0,
+      "average_pickup_time_minutes": 3.5
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/queue?hub_id=456e7890-e89b-12d3-a456-426614174001&date=2025-07-04" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 7. Cancel Drive-Thru Booking (Authenticated)
+**Endpoint:** `POST /api/pickup/drive-thru/cancel`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "slot_id": "slot-20250704-0900-001",
+  "cancellation_reason": "customer_request",
+  "notes": "Customer needs to reschedule due to traffic delay"
+}
+```
+
+#### Valid Cancellation Reasons:
+- `customer_request` - Customer requested cancellation
+- `order_issue` - Problem with the order
+- `hub_closure` - Hub temporarily closed
+- `emergency` - Emergency situation
+- `weather` - Weather-related cancellation
+- `other` - Other reason
+
+#### Access Control:
+- **Customers can cancel their own bookings**
+- **Hub owners/staff can cancel bookings for their hubs**
+- **Admins can cancel any booking**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Drive-thru booking cancelled successfully",
+  "data": {
+    "cancellation": {
+      "slot_id": "slot-20250704-0900-001",
+      "booking_reference": "DT-20250704-090001",
+      "original_start_time": "2025-07-04T09:00:00.000Z",
+      "cancelled_at": "2025-07-04T08:40:00.000Z",
+      "cancellation_reason": "customer_request",
+      "notes": "Customer needs to reschedule due to traffic delay",
+      "cancelled_by": "customer",
+      "refund_eligible": true,
+      "cancellation_fee": 0.00
+    },
+    "slot_availability": {
+      "slot_id": "slot-20250704-0900-001",
+      "is_available": true,
+      "available_for_rebooking_at": "2025-07-04T08:40:00.000Z"
+    }
+  }
+}
+```
+
+#### Error Response for Late Cancellation (400):
+```json
+{
+  "success": false,
+  "message": "Cancellation deadline has passed. You can only cancel bookings at least 30 minutes in advance.",
+  "data": {
+    "cancellation_deadline": "2025-07-04T08:30:00.000Z",
+    "current_time": "2025-07-04T08:45:00.000Z",
+    "minutes_past_deadline": 15
+  }
+}
+```
+
+#### Error Response for Already Cancelled (400):
+```json
+{
+  "success": false,
+  "message": "This booking has already been cancelled"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/pickup/drive-thru/cancel \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "slot_id": "slot-20250704-0900-001",
+    "cancellation_reason": "customer_request",
+    "notes": "Customer needs to reschedule due to traffic delay"
+  }'
+```
+
+#### Real-time WebSocket Events:
+When a booking is cancelled, the following events are emitted:
+- **Event:** `drive_thru_booking_cancelled`
+- **Room:** `hub_${hub_id}` (for hub staff)
+- **Room:** `user_${customer_id}` (for customer)
+- **Data:** `{ slot_id, booking_reference, cancellation_reason, cancelled_by }`
+
+---
+
+### 8. Get Drive-Thru History (Authenticated)
+**Endpoint:** `GET /api/pickup/drive-thru/history`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Query Parameters:
+- `page` (optional) - Page number (default: 1)
+- `limit` (optional) - Items per page (default: 20, max: 100)
+- `hub_id` (optional) - Filter by specific hub (for hub owners/admins)
+- `status` (optional) - Filter by status: `completed`, `cancelled`, `no_show`
+- `date_from` (optional) - Start date filter (YYYY-MM-DD)
+- `date_to` (optional) - End date filter (YYYY-MM-DD)
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Drive-thru history retrieved successfully",
+  "data": {
+    "history": [
+      {
+        "slot_id": "slot-20250703-1400-001",
+        "booking_reference": "DT-20250703-140001",
+        "hub": {
+          "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+          "name": "Downtown Hub",
+          "address": "123 Main St, City, State"
+        },
+        "scheduled_time": "2025-07-03T14:00:00.000Z",
+        "actual_pickup_time": "2025-07-03T14:02:00.000Z",
+        "status": "completed",
+        "order": {
+          "order_id": "ord11111-e89b-12d3-a456-426614174006",
+          "total_amount": 34.50,
+          "item_count": 4
+        },
+        "vehicle_info": {
+          "make": "Toyota",
+          "model": "Camry",
+          "color": "Blue",
+          "license_plate": "ABC123"
+        },
+        "pickup_duration_seconds": 120,
+        "rating_given": 5,
+        "feedback": "Excellent service, very quick pickup!",
+        "special_instructions": "Extra bags please",
+        "booked_at": "2025-07-03T12:30:00.000Z",
+        "completed_at": "2025-07-03T14:02:00.000Z"
+      },
+      {
+        "slot_id": "slot-20250702-1030-002",
+        "booking_reference": "DT-20250702-103002",
+        "hub": {
+          "hub_id": "789e1234-e89b-12d3-a456-426614174002",
+          "name": "Community Hub",
+          "address": "456 Community St, City, State"
+        },
+        "scheduled_time": "2025-07-02T10:30:00.000Z",
+        "actual_pickup_time": null,
+        "status": "cancelled",
+        "cancellation_reason": "customer_request",
+        "cancellation_notes": "Had to cancel due to emergency",
+        "order": {
+          "order_id": "ord22222-e89b-12d3-a456-426614174007",
+          "total_amount": 18.75,
+          "item_count": 2
+        },
+        "booked_at": "2025-07-02T09:00:00.000Z",
+        "cancelled_at": "2025-07-02T10:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 2,
+      "pages": 1
+    },
+    "summary": {
+      "total_bookings": 15,
+      "completed_pickups": 12,
+      "cancelled_bookings": 2,
+      "no_shows": 1,
+      "average_rating": 4.8,
+      "total_savings_time_minutes": 180,
+      "favorite_hubs": [
+        {
+          "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+          "name": "Downtown Hub",
+          "pickup_count": 8
+        }
+      ]
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/history?page=1&limit=10&status=completed&date_from=2025-07-01&date_to=2025-07-04" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 9. Rate Drive-Thru Experience (Authenticated)
+**Endpoint:** `PUT /api/pickup/drive-thru/rating`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "slot_id": "slot-20250703-1400-001",
+  "rating": 5,
+  "feedback": "Excellent service! Very quick and efficient pickup process.",
+  "service_aspects": {
+    "speed": 5,
+    "staff_friendliness": 5,
+    "order_accuracy": 5,
+    "overall_experience": 5
+  },
+  "suggestions": "Maybe add a digital menu board at the drive-thru window"
+}
+```
+
+#### Validation Rules:
+- `rating` - Integer between 1 and 5
+- `service_aspects` - Each aspect rated 1-5
+- `feedback` - Optional text (max 1000 characters)
+- `suggestions` - Optional text (max 500 characters)
+
+#### Access Control:
+- **Only customers who completed the pickup can rate**
+- **One rating per booking**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Rating submitted successfully",
+  "data": {
+    "rating_submission": {
+      "slot_id": "slot-20250703-1400-001",
+      "booking_reference": "DT-20250703-140001",
+      "customer_id": "123e4567-e89b-12d3-a456-426614174000",
+      "rating": 5,
+      "feedback": "Excellent service! Very quick and efficient pickup process.",
+      "service_aspects": {
+        "speed": 5,
+        "staff_friendliness": 5,
+        "order_accuracy": 5,
+        "overall_experience": 5
+      },
+      "suggestions": "Maybe add a digital menu board at the drive-thru window",
+      "submitted_at": "2025-07-03T15:00:00.000Z"
+    },
+    "impact": {
+      "hub_average_rating": 4.9,
+      "total_ratings_for_hub": 45,
+      "your_total_ratings": 8
+    }
+  }
+}
+```
+
+#### Error Response for Already Rated (400):
+```json
+{
+  "success": false,
+  "message": "You have already rated this drive-thru experience"
+}
+```
+
+#### Error Response for Invalid Booking (400):
+```json
+{
+  "success": false,
+  "message": "You can only rate completed pickups that you participated in"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X PUT http://localhost:3000/api/pickup/drive-thru/rating \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "slot_id": "slot-20250703-1400-001",
+    "rating": 5,
+    "feedback": "Excellent service! Very quick and efficient pickup process.",
+    "service_aspects": {
+      "speed": 5,
+      "staff_friendliness": 5,
+      "order_accuracy": 5,
+      "overall_experience": 5
+    },
+    "suggestions": "Maybe add a digital menu board at the drive-thru window"
+  }'
+```
+
+#### Real-time WebSocket Events:
+When a rating is submitted, the following events are emitted:
+- **Event:** `drive_thru_rating_received`
+- **Room:** `hub_${hub_id}` (for hub staff)
+- **Data:** `{ slot_id, rating, feedback, service_aspects }`
+
+---
+
+## 🔌 **Real-Time WebSocket Events for Drive-Thru System**
+
+The Drive-Thru Pickup System includes comprehensive real-time communication using Socket.IO. Here are all the WebSocket events you can listen for:
+
+### Connection Setup
+```javascript
+// Connect to WebSocket server
+const socket = io('http://localhost:3000');
+
+// Join specific rooms for updates
+socket.emit('join_room', `user_${user_id}`);      // For customer updates
+socket.emit('join_room', `hub_${hub_id}`);        // For hub staff updates
+```
+
+### Event Types
+
+#### 1. `drive_thru_enabled`
+**Room:** `hub_${hub_id}`
+**Triggered:** When drive-thru service is enabled for a hub
+```javascript
+socket.on('drive_thru_enabled', (data) => {
+  console.log('Drive-thru enabled:', data);
+  // { hub_id, configuration, slots_generated }
+});
+```
+
+#### 2. `drive_thru_slot_booked`
+**Room:** `hub_${hub_id}`
+**Triggered:** When a customer books a drive-thru slot
+```javascript
+socket.on('drive_thru_slot_booked', (data) => {
+  console.log('New booking:', data);
+  // { slot_id, customer_id, order_id, start_time, vehicle_info }
+});
+```
+
+#### 3. `drive_thru_customer_notified`
+**Room:** `user_${customer_id}`
+**Triggered:** When hub staff notifies customer about order status
+```javascript
+socket.on('drive_thru_customer_notified', (data) => {
+  console.log('Notification received:', data);
+  // { slot_id, notification_type, message, estimated_wait_minutes }
+});
+```
+
+#### 4. `drive_thru_pickup_completed`
+**Rooms:** `hub_${hub_id}`, `user_${customer_id}`
+**Triggered:** When pickup is confirmed as completed
+```javascript
+socket.on('drive_thru_pickup_completed', (data) => {
+  console.log('Pickup completed:', data);
+  // { slot_id, booking_reference, actual_pickup_time, status }
+});
+```
+
+#### 5. `drive_thru_booking_cancelled`
+**Rooms:** `hub_${hub_id}`, `user_${customer_id}`
+**Triggered:** When a booking is cancelled
+```javascript
+socket.on('drive_thru_booking_cancelled', (data) => {
+  console.log('Booking cancelled:', data);
+  // { slot_id, booking_reference, cancellation_reason, cancelled_by }
+});
+```
+
+#### 6. `drive_thru_rating_received`
+**Room:** `hub_${hub_id}`
+**Triggered:** When a customer submits a rating
+```javascript
+socket.on('drive_thru_rating_received', (data) => {
+  console.log('New rating:', data);
+  // { slot_id, rating, feedback, service_aspects }
+});
+```
+
+### Testing WebSocket Events
+
+#### Using wscat (Command Line):
+```bash
+# Install wscat
+npm install -g wscat
+
+# Connect to WebSocket server
+wscat -c ws://localhost:3000
+
+# Join a room to receive events
+{"type": "join_room", "room": "hub_456e7890-e89b-12d3-a456-426614174001"}
+```
+
+#### Using Browser Console:
+```javascript
+// Connect to server
+const socket = io('http://localhost:3000');
+
+// Join room for a specific hub
+socket.emit('join_room', 'hub_456e7890-e89b-12d3-a456-426614174001');
+
+// Listen for all drive-thru events
+socket.on('drive_thru_enabled', console.log);
+socket.on('drive_thru_slot_booked', console.log);
+socket.on('drive_thru_customer_notified', console.log);
+socket.on('drive_thru_pickup_completed', console.log);
+socket.on('drive_thru_booking_cancelled', console.log);
+socket.on('drive_thru_rating_received', console.log);
+
+// Test connection
+socket.on('connect', () => {
+  console.log('Connected to WebSocket server');
+});
+```
+
+#### Using websocat (Advanced WebSocket Client):
+```bash
+# Install websocat
+# Windows: Download from https://github.com/vi/websocat/releases
+# Mac: brew install websocat
+# Linux: cargo install websocat
+
+# Connect and listen for events
+echo '{"type": "join_room", "room": "hub_456e7890-e89b-12d3-a456-426614174001"}' | websocat ws://localhost:3000
+```
+
+---
+
+## 🚗 **Drive-Thru Testing Workflow**
+
+### Complete Testing Sequence:
+
+#### 1. Setup (Hub Owner)
+```bash
+# 1. Enable drive-thru service
+curl -X POST http://localhost:3000/api/pickup/drive-thru/enable \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer HUB_OWNER_TOKEN" \
+  -d '{ /* configuration data */ }'
+
+# 2. Check available slots
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/slots?hub_id=456e7890-e89b-12d3-a456-426614174001&date=2025-07-04"
+```
+
+#### 2. Customer Booking
+```bash
+# 1. Book a slot
+curl -X POST http://localhost:3000/api/pickup/drive-thru/book \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer CUSTOMER_TOKEN" \
+  -d '{ /* booking data */ }'
+
+# 2. Check queue status
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/queue?hub_id=456e7890-e89b-12d3-a456-426614174001" \
+  -H "Authorization: Bearer CUSTOMER_TOKEN"
+```
+
+#### 3. Hub Operations
+```bash
+# 1. View current queue
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/queue?hub_id=456e7890-e89b-12d3-a456-426614174001" \
+  -H "Authorization: Bearer HUB_OWNER_TOKEN"
+
+# 2. Notify customer when ready
+curl -X PUT http://localhost:3000/api/pickup/drive-thru/notify \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer HUB_OWNER_TOKEN" \
+  -d '{ /* notification data */ }'
+
+# 3. Confirm pickup completion
+curl -X POST http://localhost:3000/api/pickup/drive-thru/confirm \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer HUB_OWNER_TOKEN" \
+  -d '{ /* confirmation data */ }'
+```
+
+#### 4. Customer Feedback
+```bash
+# 1. Rate the experience
+curl -X PUT http://localhost:3000/api/pickup/drive-thru/rating \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer CUSTOMER_TOKEN" \
+  -d '{ /* rating data */ }'
+
+# 2. View history
+curl -X GET "http://localhost:3000/api/pickup/drive-thru/history?page=1&limit=10" \
+  -H "Authorization: Bearer CUSTOMER_TOKEN"
+```
+
+#### 5. Optional: Cancellation
+```bash
+# Cancel booking (if needed)
+curl -X POST http://localhost:3000/api/pickup/drive-thru/cancel \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer CUSTOMER_TOKEN" \
+  -d '{ /* cancellation data */ }'
+```
+
+---
+
+## 🚫 **Missing Endpoints (Not Yet Implemented)**
 
 ### Crisis Mode Management ❌
 - `POST /api/crisis/activate`
@@ -2124,17 +3230,17 @@ chmod +x test-complete-api.sh
 - **Admin Management** (7 endpoints) - Administrative functions
 - **Health Check** (1 endpoint) - System status
 - **User Management** (7 endpoints) - User profile and verification
+- **Drive-Thru Pickup System** (8 endpoints) - Complete drive-thru functionality
 
 ### ❌ **Awaiting Implementation:**
-- **Drive-Thru Pickup System** (8 endpoints) - Critical for community commerce
 - **Crisis Mode Management** (9 endpoints) - Emergency response system
 - **Financial & Earnings** (9 endpoints) - Community earnings tracking
 - **Mobile App Support** (8 endpoints) - Mobile-specific features
 - **Real-time Communication** (8 endpoints) - Community chat and alerts
 
-**Total Available:** 50 endpoints ready for testing
-**Total Missing:** 35 endpoints awaiting implementation
+**Total Available:** 58 endpoints ready for testing
+**Total Missing:** 26 endpoints awaiting implementation
 
 ---
 
-This testing guide provides comprehensive coverage of all currently available API endpoints. Use it to validate the authentication system and other implemented features before moving on to implement the missing critical endpoints like the Drive-Thru Pickup System.
+This testing guide provides comprehensive coverage of all currently available API endpoints. Use it to validate the authentication system and other implemented features before moving on to implement the missing critical endpoints like the Crisis Mode Management.

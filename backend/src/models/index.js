@@ -7,6 +7,8 @@ const Product = require('./Product')(sequelize);
 const Inventory = require('./Inventory')(sequelize);
 const Order = require('./Order')(sequelize);
 const OrderItem = require('./OrderItem')(sequelize);
+const DriveThruSlot = require('./DriveThruSlot')(sequelize);
+const DriveThruConfiguration = require('./DriveThruConfiguration')(sequelize);
 
 // Define associations
 const setupAssociations = () => {
@@ -46,6 +48,16 @@ const setupAssociations = () => {
     foreignKey: 'destination_hub_id', 
     as: 'destinationOrders',
     onDelete: 'SET NULL' 
+  });
+  Hub.hasOne(DriveThruConfiguration, {
+    foreignKey: 'hub_id',
+    as: 'driveThruConfig',
+    onDelete: 'CASCADE'
+  });
+  Hub.hasMany(DriveThruSlot, {
+    foreignKey: 'hub_id',
+    as: 'driveThruSlots',
+    onDelete: 'CASCADE'
   });
 
   // Product associations
@@ -102,6 +114,40 @@ const setupAssociations = () => {
     foreignKey: 'product_id', 
     as: 'product' 
   });
+
+  // DriveThruSlot associations
+  DriveThruSlot.belongsTo(Hub, {
+    foreignKey: 'hub_id',
+    as: 'hub'
+  });
+  DriveThruSlot.belongsTo(User, {
+    foreignKey: 'customer_id',
+    as: 'customer'
+  });
+  DriveThruSlot.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+  });
+
+  // User has many drive-thru slots
+  User.hasMany(DriveThruSlot, {
+    foreignKey: 'customer_id',
+    as: 'driveThruSlots',
+    onDelete: 'CASCADE'
+  });
+
+  // Order has one drive-thru slot
+  Order.hasOne(DriveThruSlot, {
+    foreignKey: 'order_id',
+    as: 'driveThruSlot',
+    onDelete: 'CASCADE'
+  });
+
+  // DriveThruConfiguration associations
+  DriveThruConfiguration.belongsTo(Hub, {
+    foreignKey: 'hub_id',
+    as: 'hub'
+  });
 };
 
 // Setup associations
@@ -128,5 +174,7 @@ module.exports = {
   Inventory,
   Order,
   OrderItem,
+  DriveThruSlot,
+  DriveThruConfiguration,
   syncDatabase
 };
