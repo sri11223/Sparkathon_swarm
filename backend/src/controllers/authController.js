@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { User } = require('../models');
 const { generateToken } = require('../middleware/auth');
 const logger = require('../utils/logger');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
+const EmailService = require('../services/emailService');
 
 class AuthController {
   // Register new user
@@ -29,8 +29,8 @@ class AuthController {
         });
       }
 
-      // Generate verification token
-      const verification_token = crypto.randomBytes(32).toString('hex');
+      // Generate 6-digit OTP for email verification
+      const verification_otp = Math.floor(100000 + Math.random() * 900000).toString();
 
       // Create user data matching the database schema
       const userData = {
@@ -41,8 +41,8 @@ class AuthController {
         middle_name,
         phone_number,
         role,
-        email_verification_token: verification_token,
-        email_verification_expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        email_verification_token: verification_otp, // Storing OTP in this field
+        email_verification_expires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
         is_email_verified: false
       };
 
@@ -53,7 +53,7 @@ class AuthController {
 
       // Send verification email
       try {
-        await sendVerificationEmail(user.email, `${user.first_name} ${user.last_name}`, verification_token);
+        await EmailService.sendVerificationEmail(user.email, `${user.first_name} ${user.last_name}`, verification_otp);
       } catch (emailError) {
         logger.error('Failed to send verification email:', emailError);
         // Don't fail registration if email fails
@@ -145,11 +145,12 @@ class AuthController {
   // Verify email
   static async verifyEmail(req, res) {
     try {
-      const { token } = req.params;
+      const { email, otp } = req.body;
 
       const user = await User.findOne({ 
         where: { 
-          email_verification_token: token,
+          email: email,
+          email_verification_token: otp,
           email_verification_expires: {
             [require('sequelize').Op.gt]: new Date()
           }
@@ -159,7 +160,7 @@ class AuthController {
       if (!user) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid or expired verification token'
+          message: 'Invalid or expired OTP'
         });
       }
 
@@ -200,22 +201,22 @@ class AuthController {
         // Don't reveal if email exists
         return res.json({
           success: true,
-          message: 'If the email exists, a password reset link has been sent.'
+          message: 'If the email exists, a password reset OTP has been sent.'
         });
       }
 
-      // Generate reset token
-      const reset_token = crypto.randomBytes(32).toString('hex');
-      const reset_expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp_expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       await user.update({
-        password_reset_token: reset_token,
-        password_reset_expires: reset_expires
+        otp: otp,
+        otp_expires: otp_expires
       });
 
-      // Send password reset email
+      // Send password reset email with OTP
       try {
-        await sendPasswordResetEmail(user.email, `${user.first_name} ${user.last_name}`, reset_token);
+        await EmailService.sendPasswordResetEmail(user.email, `${user.first_name} ${user.last_name}`, otp);
       } catch (emailError) {
         logger.error('Failed to send password reset email:', emailError);
         return res.status(500).json({
@@ -224,11 +225,11 @@ class AuthController {
         });
       }
 
-      logger.info(`Password reset requested for user: ${user.email}`);
+      logger.info(`Password reset OTP sent to user: ${user.email}`);
 
       res.json({
         success: true,
-        message: 'Password reset link has been sent to your email.'
+        message: 'Password reset OTP has been sent to your email.'
       });
 
     } catch (error) {
@@ -244,13 +245,13 @@ class AuthController {
   // Reset password
   static async resetPassword(req, res) {
     try {
-      const { token } = req.params;
-      const { password } = req.body;
+      const { email, otp, password } = req.body;
 
       const user = await User.findOne({
         where: {
-          password_reset_token: token,
-          password_reset_expires: {
+          email: email,
+          otp: otp,
+          otp_expires: {
             [require('sequelize').Op.gt]: new Date()
           }
         }
@@ -259,15 +260,15 @@ class AuthController {
       if (!user) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid or expired reset token'
+          message: 'Invalid or expired OTP'
         });
       }
 
-      // Update password and clear reset tokens
+      // Update password and clear OTP fields
       await user.update({
         password_hash: password, // Will be hashed by model hook
-        password_reset_token: null,
-        password_reset_expires: null
+        otp: null,
+        otp_expires: null
       });
 
       logger.info(`Password reset completed for user: ${user.email}`);

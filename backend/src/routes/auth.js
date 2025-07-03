@@ -20,9 +20,12 @@ router.post('/register', validateUserRegistration, AuthController.register);
 router.post('/login', validateUserLogin, AuthController.login);
 
 // @desc    Verify email
-// @route   GET /api/auth/verify-email/:token
+// @route   POST /api/auth/verify-email
 // @access  Public
-router.get('/verify-email/:token', AuthController.verifyEmail);
+router.post('/verify-email', [
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email address'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits')
+], AuthController.verifyEmail);
 
 // @desc    Request password reset
 // @route   POST /api/auth/forgot-password
@@ -32,9 +35,11 @@ router.post('/forgot-password', [
 ], AuthController.requestPasswordReset);
 
 // @desc    Reset password
-// @route   POST /api/auth/reset-password/:token
+// @route   POST /api/auth/reset-password
 // @access  Public
-router.post('/reset-password/:token', [
+router.post('/reset-password', [
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email address'),
+  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')

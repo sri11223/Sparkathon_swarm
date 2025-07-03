@@ -36,7 +36,7 @@ const seedDatabase = async () => {
       'demand_predictions', 'demand_signals', 'deliveries', 'order_items', 
       'orders', 'hub_inventory', 'products', 'courier_vehicles', 'hubs', 'users'
     ];
-    await client.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY`);
+    await client.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
     console.log('✅ All tables wiped clean.');
 
     // --- USERS (with edge cases) ---
@@ -53,10 +53,31 @@ const seedDatabase = async () => {
       if (role === 'courier' && i === HUB_COUNT) background_check_status = 'pending';
       if (role === 'courier' && i === HUB_COUNT + 1) background_check_status = 'failed';
 
+      const is_email_verified = i % 5 !== 0; // ~20% of users are not verified
       const res = await client.query(
-        `INSERT INTO users (user_id, first_name, last_name, email, password_hash, phone_number, role, background_check_status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW()) RETURNING *`,
-        [faker.string.uuid(), faker.person.firstName(), faker.person.lastName(), faker.internet.email({ allowSpecialCharacters: false }), password_hash, faker.phone.number().slice(0, 20), role, background_check_status]
+        `INSERT INTO users (
+          user_id, first_name, middle_name, last_name, email, password_hash, 
+          phone_number, role, is_active, last_login, background_check_status, 
+          is_email_verified, email_verification_token, email_verification_expires,
+          created_at, updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW()) RETURNING *`,
+        [
+          faker.string.uuid(),
+          faker.person.firstName(),
+          faker.person.middleName(),
+          faker.person.lastName(),
+          faker.internet.email({ allowSpecialCharacters: false }),
+          password_hash,
+          faker.phone.number().slice(0, 20),
+          role,
+          i % 10 !== 0, // ~10% of users are inactive
+          faker.date.recent({ days: 30 }),
+          background_check_status,
+          is_email_verified,
+          is_email_verified ? null : faker.string.uuid(),
+          is_email_verified ? null : faker.date.future({ years: 1 }),
+        ]
       );
       createdUsers.push(res.rows[0]);
     }
@@ -155,7 +176,7 @@ const seedDatabase = async () => {
         const stockoutQuantity = popularProduct.available_quantity;
         
         const stockoutOrderRes = await client.query(
-            `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price) VALUES ($1, $2, $3, 'completed', 'drive_thru_pickup', $4) RETURNING *`,
+            `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price, created_at, updated_at) VALUES ($1, $2, $3, 'completed', 'drive_thru_pickup', $4, NOW(), NOW()) RETURNING *`,
             [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, (stockoutQuantity * parseFloat(createdProducts.find(p => p.product_id === popularProduct.product_id).price)).toFixed(2)]
         );
         const stockoutOrder = stockoutOrderRes.rows[0];
@@ -184,7 +205,7 @@ const seedDatabase = async () => {
       
       const customer = getRandom(customers);
       const orderRes = await client.query(
-        `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price) VALUES ($1, $2, $3, 'completed', 'delivery', 100.0) RETURNING *`,
+        `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price, created_at, updated_at) VALUES ($1, $2, $3, 'completed', 'delivery', 100.0, NOW(), NOW()) RETURNING *`,
         [faker.string.uuid(), customer.user_id, hub.hub_id]
       );
       const order = orderRes.rows[0];

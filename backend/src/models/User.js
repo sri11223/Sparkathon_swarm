@@ -43,7 +43,6 @@ module.exports = (sequelize) => {
       const user = { ...this.get() };
       delete user.password_hash;
       delete user.email_verification_token;
-      delete user.password_reset_token;
       return user;
     }
   }
@@ -113,11 +112,11 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    password_reset_token: {
+    otp: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    password_reset_expires: {
+    otp_expires: {
       type: DataTypes.DATE,
       allowNull: true,
     },

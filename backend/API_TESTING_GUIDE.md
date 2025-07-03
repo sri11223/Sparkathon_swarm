@@ -137,16 +137,21 @@ curl -X POST http://localhost:3000/api/auth/login \
 ---
 
 ### 3. Verify Email
-**Endpoint:** `GET /api/auth/verify-email/:token`
+**Endpoint:** `POST /api/auth/verify-email`
 **Status:** ✅ READY
 
 #### Request Headers:
 ```
-(No headers required)
+Content-Type: application/json
 ```
 
-#### URL Parameters:
-- `token` - Email verification token received via email
+#### Request Body:
+```json
+{
+  "email": "john.doe@example.com",
+  "otp": "123456"
+}
+```
 
 #### Expected Response (200):
 ```json
@@ -165,8 +170,14 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 #### Testing with curl:
 ```bash
-curl -X GET http://localhost:3000/api/auth/verify-email/your-verification-token-here
+curl -X POST http://localhost:3000/api/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "otp": "123456"
+  }'
 ```
+
 
 ---
 
