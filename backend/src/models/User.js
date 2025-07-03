@@ -120,13 +120,12 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    is_active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-      allowNull: false,
-    },
     last_login: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    avatar_url: {
+      type: DataTypes.STRING,
       allowNull: true,
     },
   }, {

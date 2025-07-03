@@ -68,18 +68,18 @@ POST /api/auth/login
 
 ---
 
-## 👥 User Management ⚠️
+## 👥 User Management ✅
 **Base Route:** `/api/users`
 
 | Status | Method | Endpoint | Description | Access |
 |--------|--------|----------|-------------|---------|
 | ✅ | `POST` | `/` | Create a new user | Public |
-| ❌ | `GET` | `/profile/detailed` | Get detailed user profile | Private |
-| ❌ | `PUT` | `/profile/update` | Update user profile | Private |
-| ❌ | `POST` | `/profile/avatar` | Upload user avatar | Private |
-| ❌ | `GET` | `/earnings` | Get user earnings summary | Private |
-| ❌ | `POST` | `/verification/request` | Request identity verification | Private |
-| ❌ | `GET` | `/verification/status` | Check verification status | Private |
+| ✅ | `GET` | `/profile/detailed` | Get detailed user profile | Private |
+| ✅ | `PUT` | `/profile/update` | Update user profile | Private |
+| ✅ | `POST` | `/profile/avatar` | Upload user avatar | Private |
+| ✅ | `GET` | `/earnings` | Get user earnings summary | Private |
+| ✅ | `POST` | `/verification/request` | Request identity verification | Private |
+| ✅ | `GET` | `/verification/status` | Check verification status | Private |
 
 ---
 

@@ -44,6 +44,9 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Static file serving for uploads
+app.use('/uploads', express.static('uploads'));
+
 // Logging middleware
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path} - ${req.ip}`);

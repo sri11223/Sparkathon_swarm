@@ -34,7 +34,7 @@ class EmailService {
       const transporter = await this.initializeTransporter();
       
       const mailOptions = {
-        from: 'SwarmFill Network <your-email@gmail.com>', // Replace with your Gmail
+        from: 'SwarmFill Network <nutalapatisrikrishna85@gmail.com>',
         to: email,
         subject: 'Verify Your SwarmFill Account',
         html: `

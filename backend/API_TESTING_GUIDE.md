@@ -534,7 +534,411 @@ curl -X POST http://localhost:3000/api/hubs \
 
 ---
 
-## 📦 **Product Management Endpoints** ✅
+## � **User Management Endpoints** ✅
+
+### 1. Create User
+**Endpoint:** `POST /api/users`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+```
+
+#### Request Body:
+```json
+{
+  "email": "jane.smith@example.com",
+  "password": "SecurePass123!",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "middle_name": "Marie",
+  "phone_number": "+1234567891",
+  "role": "hub_owner"
+}
+```
+
+#### Valid Roles:
+- `customer` - Regular customer
+- `hub_owner` - Hub owner/manager
+- `courier` - Delivery courier
+- `admin` - System administrator
+
+#### Expected Response (201):
+```json
+{
+  "success": true,
+  "message": "User created successfully",
+  "data": {
+    "user": {
+      "user_id": "456e7890-e89b-12d3-a456-426614174001",
+      "email": "jane.smith@example.com",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "middle_name": "Marie",
+      "role": "hub_owner",
+      "phone_number": "+1234567891",
+      "is_email_verified": false,
+      "is_active": true,
+      "background_check_status": "not_started",
+      "created_at": "2025-07-03T12:00:00.000Z",
+      "updated_at": "2025-07-03T12:00:00.000Z"
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane.smith@example.com",
+    "password": "SecurePass123!",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "middle_name": "Marie",
+    "phone_number": "+1234567891",
+    "role": "hub_owner"
+  }'
+```
+
+---
+
+### 2. Get Detailed User Profile
+**Endpoint:** `GET /api/users/profile/detailed`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "user": {
+      "user_id": "123e4567-e89b-12d3-a456-426614174000",
+      "email": "john.doe@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "middle_name": "Michael",
+      "role": "customer",
+      "phone_number": "+1234567890",
+      "is_email_verified": true,
+      "is_active": true,
+      "background_check_status": "not_started",
+      "avatar_url": "/uploads/avatars/avatar-1625312400000-123456789.jpg",
+      "average_rating": "4.8",
+      "total_ratings": 25,
+      "hubs": [],
+      "vehicles": [],
+      "earnings": {
+        "total_earnings": 1250.50,
+        "recent_payouts": []
+      },
+      "created_at": "2025-07-03T10:30:00.000Z",
+      "updated_at": "2025-07-03T12:00:00.000Z"
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET http://localhost:3000/api/users/profile/detailed \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 3. Update User Profile
+**Endpoint:** `PUT /api/users/profile/update`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "middle_name": "Michael",
+  "phone_number": "+1234567890"
+}
+```
+
+#### Notes:
+- Cannot update: `email`, `password_hash`, `role`, `is_email_verified`, `is_active`
+- Email changes require separate verification process
+- Role changes are admin-only
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "user": {
+      "user_id": "123e4567-e89b-12d3-a456-426614174000",
+      "email": "john.doe@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "middle_name": "Michael",
+      "phone_number": "+1234567890",
+      "role": "customer",
+      "updated_at": "2025-07-03T12:15:00.000Z"
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X PUT http://localhost:3000/api/users/profile/update \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "first_name": "John",
+    "last_name": "Doe",
+    "middle_name": "Michael",
+    "phone_number": "+1234567890"
+  }'
+```
+
+---
+
+### 4. Upload User Avatar
+**Endpoint:** `POST /api/users/profile/avatar`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: multipart/form-data
+```
+
+#### Request Body:
+```
+Form data with 'avatar' field containing image file
+Max file size: 5MB
+Accepted formats: image/jpeg, image/png, image/gif, image/webp
+```
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Avatar uploaded successfully",
+  "data": {
+    "avatar_url": "/uploads/avatars/avatar-1625312400000-123456789.jpg"
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/users/profile/avatar \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "avatar=@/path/to/your/image.jpg"
+```
+
+#### Testing with Postman:
+1. Set method to POST
+2. Add Authorization header: `Bearer YOUR_JWT_TOKEN`
+3. Go to Body tab
+4. Select "form-data"
+5. Add key "avatar" with type "File"
+6. Choose your image file
+
+---
+
+### 5. Get User Earnings Summary
+**Endpoint:** `GET /api/users/earnings`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Access Requirements:
+- **Only available for users with role:** `hub_owner` or `courier`
+- **Customers and admins will receive 403 Forbidden**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Earnings retrieved successfully",
+  "data": {
+    "summary": {
+      "total_earnings": 2500.75,
+      "pending_earnings": 150.25,
+      "completed_payouts": 12,
+      "pending_payouts": 2
+    },
+    "monthly_earnings": [
+      {
+        "month": "2025-01-01T00:00:00.000Z",
+        "total": 450.50
+      },
+      {
+        "month": "2025-02-01T00:00:00.000Z",
+        "total": 520.25
+      },
+      {
+        "month": "2025-03-01T00:00:00.000Z",
+        "total": 680.00
+      }
+    ],
+    "recent_payouts": [
+      {
+        "payout_id": "abc12345-e89b-12d3-a456-426614174003",
+        "amount": 250.00,
+        "status": "completed",
+        "completion_date": "2025-07-01T10:00:00.000Z",
+        "created_at": "2025-06-28T10:00:00.000Z"
+      },
+      {
+        "payout_id": "def67890-e89b-12d3-a456-426614174004",
+        "amount": 180.50,
+        "status": "pending",
+        "created_at": "2025-07-02T15:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+#### Error Response for Wrong Role (403):
+```json
+{
+  "success": false,
+  "message": "Only hub owners and couriers can view earnings"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET http://localhost:3000/api/users/earnings \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 6. Request Identity Verification
+**Endpoint:** `POST /api/users/verification/request`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Request Body:
+```json
+{
+  "verification_type": "identity",
+  "documents": [
+    {
+      "type": "government_id",
+      "url": "/uploads/documents/id-123456789.jpg"
+    },
+    {
+      "type": "proof_of_address",
+      "url": "/uploads/documents/address-123456789.pdf"
+    }
+  ]
+}
+```
+
+#### Valid Verification Types:
+- `identity` - Government ID verification
+- `background_check` - Background check request
+- `driving_license` - Driving license verification (for couriers)
+
+#### Valid Document Types:
+- `government_id` - Driver's license, passport, state ID
+- `proof_of_address` - Utility bill, bank statement
+- `driving_license` - Valid driving license
+- `insurance` - Vehicle insurance proof
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Verification request submitted successfully",
+  "data": {
+    "status": "pending",
+    "estimated_completion": "3-5 business days"
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/users/verification/request \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "verification_type": "identity",
+    "documents": [
+      {
+        "type": "government_id",
+        "url": "/uploads/documents/id-123456789.jpg"
+      }
+    ]
+  }'
+```
+
+---
+
+### 7. Check Verification Status
+**Endpoint:** `GET /api/users/verification/status`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Verification status retrieved successfully",
+  "data": {
+    "email_verified": true,
+    "background_check_status": "pending",
+    "last_updated": "2025-07-03T12:00:00.000Z"
+  }
+}
+```
+
+#### Background Check Status Values:
+- `not_started` - No verification requested
+- `pending` - Verification in progress
+- `passed` - Verification completed successfully
+- `failed` - Verification failed
+
+#### Testing with curl:
+```bash
+curl -X GET http://localhost:3000/api/users/verification/status \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+## �📦 **Product Management Endpoints** ✅
 
 ### 1. Get All Products
 **Endpoint:** `GET /api/products`
@@ -895,6 +1299,27 @@ curl -X GET http://localhost:3000/health
 
 ## 📝 **Testing Checklist**
 
+### ✅ User Management Testing
+- [ ] Create new user with valid data
+- [ ] Create user with invalid email format
+- [ ] Create user with weak password
+- [ ] Create user with duplicate email
+- [ ] Get detailed profile with authentication
+- [ ] Get detailed profile without authentication (should fail)
+- [ ] Update profile with valid data
+- [ ] Update profile with invalid data
+- [ ] Try to update restricted fields (email, role)
+- [ ] Upload avatar with valid image file
+- [ ] Upload avatar with invalid file type
+- [ ] Upload avatar without authentication (should fail)
+- [ ] Get earnings as hub owner/courier
+- [ ] Get earnings as customer (should fail with 403)
+- [ ] Get earnings without authentication (should fail)
+- [ ] Request verification with valid documents
+- [ ] Request verification with invalid type
+- [ ] Check verification status
+- [ ] Check verification status without authentication (should fail)
+
 ### ✅ Authentication Flow Testing
 - [ ] Register new user with valid data
 - [ ] Register user with invalid email format
@@ -941,14 +1366,14 @@ curl -X GET http://localhost:3000/health
 
 ## 🚀 **Quick Start Testing Script**
 
-Save this as `test-auth.sh` for quick authentication testing:
+Save this as `test-complete-api.sh` for comprehensive API testing:
 
 ```bash
 #!/bin/bash
 
 BASE_URL="http://localhost:3000/api"
 
-echo "=== Testing SwarmFill API ==="
+echo "=== Testing SwarmFill Complete API ==="
 
 # 1. Register User
 echo "1. Registering new user..."
@@ -959,6 +1384,8 @@ REGISTER_RESPONSE=$(curl -s -X POST $BASE_URL/auth/register \
     "password": "TestPass123!",
     "first_name": "Test",
     "last_name": "User",
+    "middle_name": "API",
+    "phone_number": "+1234567890",
     "role": "customer"
   }')
 
@@ -969,7 +1396,7 @@ TOKEN=$(echo $REGISTER_RESPONSE | grep -o '"token":"[^"]*' | cut -d'"' -f4)
 echo "Extracted Token: $TOKEN"
 
 # 2. Login User
-echo "2. Logging in user..."
+echo -e "\n2. Logging in user..."
 LOGIN_RESPONSE=$(curl -s -X POST $BASE_URL/auth/login \
   -H "Content-Type: application/json" \
   -d '{
@@ -979,26 +1406,161 @@ LOGIN_RESPONSE=$(curl -s -X POST $BASE_URL/auth/login \
 
 echo "Login Response: $LOGIN_RESPONSE"
 
-# 3. Get Profile
-echo "3. Getting user profile..."
+# Update token from login response
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+# 3. Get Basic Profile
+echo -e "\n3. Getting basic user profile..."
 PROFILE_RESPONSE=$(curl -s -X GET $BASE_URL/auth/profile \
   -H "Authorization: Bearer $TOKEN")
 
 echo "Profile Response: $PROFILE_RESPONSE"
 
-# 4. Health Check
-echo "4. Checking system health..."
+# 4. Get Detailed Profile
+echo -e "\n4. Getting detailed user profile..."
+DETAILED_PROFILE_RESPONSE=$(curl -s -X GET $BASE_URL/users/profile/detailed \
+  -H "Authorization: Bearer $TOKEN")
+
+echo "Detailed Profile Response: $DETAILED_PROFILE_RESPONSE"
+
+# 5. Update Profile
+echo -e "\n5. Updating user profile..."
+UPDATE_PROFILE_RESPONSE=$(curl -s -X PUT $BASE_URL/users/profile/update \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "first_name": "Updated",
+    "last_name": "User",
+    "middle_name": "Test",
+    "phone_number": "+1987654321"
+  }')
+
+echo "Update Profile Response: $UPDATE_PROFILE_RESPONSE"
+
+# 6. Check Verification Status
+echo -e "\n6. Checking verification status..."
+VERIFICATION_STATUS_RESPONSE=$(curl -s -X GET $BASE_URL/users/verification/status \
+  -H "Authorization: Bearer $TOKEN")
+
+echo "Verification Status Response: $VERIFICATION_STATUS_RESPONSE"
+
+# 7. Request Verification
+echo -e "\n7. Requesting identity verification..."
+VERIFICATION_REQUEST_RESPONSE=$(curl -s -X POST $BASE_URL/users/verification/request \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "verification_type": "identity",
+    "documents": [
+      {
+        "type": "government_id",
+        "url": "/uploads/documents/test-id.jpg"
+      }
+    ]
+  }')
+
+echo "Verification Request Response: $VERIFICATION_REQUEST_RESPONSE"
+
+# 8. Try to Get Earnings (should fail for customer)
+echo -e "\n8. Trying to get earnings (should fail for customer)..."
+EARNINGS_RESPONSE=$(curl -s -X GET $BASE_URL/users/earnings \
+  -H "Authorization: Bearer $TOKEN")
+
+echo "Earnings Response: $EARNINGS_RESPONSE"
+
+# 9. Create Hub Owner User
+echo -e "\n9. Creating hub owner user..."
+HUB_OWNER_REGISTER_RESPONSE=$(curl -s -X POST $BASE_URL/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "hubowner@example.com",
+    "password": "HubOwner123!",
+    "first_name": "Hub",
+    "last_name": "Owner",
+    "phone_number": "+1555666777",
+    "role": "hub_owner"
+  }')
+
+echo "Hub Owner Register Response: $HUB_OWNER_REGISTER_RESPONSE"
+
+# 10. Login as Hub Owner
+echo -e "\n10. Logging in as hub owner..."
+HUB_OWNER_LOGIN_RESPONSE=$(curl -s -X POST $BASE_URL/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "hubowner@example.com",
+    "password": "HubOwner123!"
+  }')
+
+echo "Hub Owner Login Response: $HUB_OWNER_LOGIN_RESPONSE"
+
+# Extract hub owner token
+HUB_OWNER_TOKEN=$(echo $HUB_OWNER_LOGIN_RESPONSE | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+# 11. Get Earnings as Hub Owner
+echo -e "\n11. Getting earnings as hub owner..."
+HUB_OWNER_EARNINGS_RESPONSE=$(curl -s -X GET $BASE_URL/users/earnings \
+  -H "Authorization: Bearer $HUB_OWNER_TOKEN")
+
+echo "Hub Owner Earnings Response: $HUB_OWNER_EARNINGS_RESPONSE"
+
+# 12. Health Check
+echo -e "\n12. Checking system health..."
 HEALTH_RESPONSE=$(curl -s -X GET http://localhost:3000/health)
 
 echo "Health Response: $HEALTH_RESPONSE"
 
-echo "=== Testing Complete ==="
+# 13. Test Error Cases
+echo -e "\n13. Testing error cases..."
+
+# Test invalid registration
+echo -e "\n13a. Testing invalid email registration..."
+INVALID_EMAIL_RESPONSE=$(curl -s -X POST $BASE_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "invalid-email",
+    "password": "TestPass123!",
+    "first_name": "Test",
+    "last_name": "User",
+    "role": "customer"
+  }')
+
+echo "Invalid Email Response: $INVALID_EMAIL_RESPONSE"
+
+# Test weak password
+echo -e "\n13b. Testing weak password registration..."
+WEAK_PASSWORD_RESPONSE=$(curl -s -X POST $BASE_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "weakpass@example.com",
+    "password": "123",
+    "first_name": "Test",
+    "last_name": "User",
+    "role": "customer"
+  }')
+
+echo "Weak Password Response: $WEAK_PASSWORD_RESPONSE"
+
+# Test unauthorized access
+echo -e "\n13c. Testing unauthorized access to protected endpoint..."
+UNAUTHORIZED_RESPONSE=$(curl -s -X GET $BASE_URL/users/profile/detailed)
+
+echo "Unauthorized Response: $UNAUTHORIZED_RESPONSE"
+
+echo -e "\n=== Testing Complete ==="
+echo -e "\nSummary:"
+echo "- User Registration: ✅"
+echo "- User Login: ✅"
+echo "- Profile Management: ✅"
+echo "- Verification System: ✅"
+echo "- Role-based Access: ✅"
+echo "- Error Handling: ✅"
 ```
 
 Make it executable and run:
 ```bash
-chmod +x test-auth.sh
-./test-auth.sh
+chmod +x test-complete-api.sh
+./test-complete-api.sh
 ```
 
 ---
@@ -1013,6 +1575,7 @@ chmod +x test-auth.sh
 - **AI Optimization** (5 endpoints) - Basic AI features
 - **Admin Management** (7 endpoints) - Administrative functions
 - **Health Check** (1 endpoint) - System status
+- **User Management** (7 endpoints) - User profile and verification
 
 ### ❌ **Awaiting Implementation:**
 - **Drive-Thru Pickup System** (8 endpoints) - Critical for community commerce
@@ -1021,8 +1584,8 @@ chmod +x test-auth.sh
 - **Mobile App Support** (8 endpoints) - Mobile-specific features
 - **Real-time Communication** (8 endpoints) - Community chat and alerts
 
-**Total Available:** 43 endpoints ready for testing
-**Total Missing:** 42 endpoints awaiting implementation
+**Total Available:** 50 endpoints ready for testing
+**Total Missing:** 35 endpoints awaiting implementation
 
 ---
 

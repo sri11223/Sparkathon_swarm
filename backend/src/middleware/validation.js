@@ -216,6 +216,7 @@ const validatePagination = [
 
 module.exports = {
   handleValidationErrors,
+  validateRequest: handleValidationErrors, // Add alias for consistency
   validateUserRegistration,
   validateUserLogin,
   validateUserUpdate,
