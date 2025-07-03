@@ -8,17 +8,15 @@ class HubController {
     try {
       const {
         name,
-        description,
         address,
         latitude,
         longitude,
-        phone,
-        operating_hours,
-        hub_type
+        capacity_m3 = 100.0,
+        description
       } = req.body;
 
       // Only hub owners and admins can create hubs
-      if (req.user.user_type !== 'hubowner' && req.user.user_type !== 'admin') {
+      if (req.user.role !== 'hub_owner' && req.user.role !== 'admin') {
         return res.status(403).json({
           success: false,
           message: 'Only hub owners can create hubs'
@@ -27,15 +25,16 @@ class HubController {
 
       const hub = await Hub.create({
         name,
-        description,
         address,
-        latitude,
-        longitude,
-        phone,
-        operating_hours,
-        hub_type,
-        owner_id: req.user.id,
-        is_active: true
+        location: {
+          type: 'Point',
+          coordinates: [parseFloat(longitude), parseFloat(latitude)]
+        },
+        capacity_m3: parseFloat(capacity_m3),
+        current_utilization_m3: 0,
+        status: 'active',
+        owner_id: req.user.user_id,
+        description
       });
 
       logger.info(`New hub created: ${hub.name} by ${req.user.email}`);
@@ -44,7 +43,19 @@ class HubController {
         success: true,
         message: 'Hub created successfully',
         data: {
-          hub: hub.toJSON()
+          hub: {
+            hub_id: hub.hub_id,
+            name: hub.name,
+            address: hub.address,
+            location: hub.location,
+            capacity_m3: hub.capacity_m3,
+            current_utilization_m3: hub.current_utilization_m3,
+            status: hub.status,
+            owner_id: hub.owner_id,
+            description: hub.description,
+            created_at: hub.created_at,
+            updated_at: hub.updated_at
+          }
         }
       });
 
@@ -65,8 +76,7 @@ class HubController {
         page = 1,
         limit = 10,
         search,
-        hub_type,
-        is_active = true,
+        status,
         latitude,
         longitude,
         radius = 50,
@@ -76,38 +86,22 @@ class HubController {
 
       let whereClause = {};
       
-      if (is_active !== undefined) {
-        whereClause.is_active = is_active === 'true';
-      }
-
-      if (hub_type) {
-        whereClause.hub_type = hub_type;
+      if (status) {
+        whereClause.status = status;
+      } else {
+        // By default, only show active hubs
+        whereClause.status = 'active';
       }
 
       if (search) {
         whereClause[Op.or] = [
           { name: { [Op.iLike]: `%${search}%` } },
-          { address: { [Op.iLike]: `%${search}%` } },
-          { description: { [Op.iLike]: `%${search}%` } }
+          { address: { [Op.iLike]: `%${search}%` } }
         ];
       }
 
-      // Location-based filtering
-      if (latitude && longitude && radius) {
-        const radiusInDegrees = radius / 111; // Convert km to degrees (approximate)
-        whereClause.latitude = {
-          [Op.between]: [
-            parseFloat(latitude) - radiusInDegrees,
-            parseFloat(latitude) + radiusInDegrees
-          ]
-        };
-        whereClause.longitude = {
-          [Op.between]: [
-            parseFloat(longitude) - radiusInDegrees,
-            parseFloat(longitude) + radiusInDegrees
-          ]
-        };
-      }
+      // TODO: Location-based filtering would require PostGIS functionality
+      // For now, we'll skip the geographic filtering
 
       const hubs = await Hub.findAndCountAll({
         where: whereClause,
@@ -115,7 +109,7 @@ class HubController {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'full_name', 'email', 'phone']
+            attributes: ['user_id', 'first_name', 'last_name', 'email']
           }
         ],
         order: [[sort, order.toUpperCase()]],
@@ -157,18 +151,7 @@ class HubController {
           {
             model: User,
             as: 'owner',
-            attributes: ['id', 'full_name', 'email', 'phone']
-          },
-          {
-            model: Inventory,
-            as: 'inventory',
-            include: [
-              {
-                model: Product,
-                as: 'product',
-                attributes: ['id', 'name', 'description', 'category', 'base_price']
-              }
-            ]
+            attributes: ['user_id', 'first_name', 'last_name', 'email']
           }
         ]
       });
@@ -184,7 +167,20 @@ class HubController {
         success: true,
         message: 'Hub retrieved successfully',
         data: {
-          hub: hub.toJSON()
+          hub: {
+            hub_id: hub.hub_id,
+            name: hub.name,
+            address: hub.address,
+            location: hub.location,
+            capacity_m3: hub.capacity_m3,
+            current_utilization_m3: hub.current_utilization_m3,
+            status: hub.status,
+            owner_id: hub.owner_id,
+            description: hub.description,
+            created_at: hub.created_at,
+            updated_at: hub.updated_at,
+            owner: hub.owner
+          }
         }
       });
 
@@ -204,14 +200,11 @@ class HubController {
       const { id } = req.params;
       const {
         name,
-        description,
         address,
         latitude,
         longitude,
-        phone,
-        operating_hours,
-        hub_type,
-        is_active
+        capacity_m3,
+        status
       } = req.body;
 
       const hub = await Hub.findByPk(id);
@@ -223,7 +216,7 @@ class HubController {
       }
 
       // Check if user can update this hub
-      if (req.user.user_type !== 'admin' && req.user.id !== hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only update your own hubs.'
@@ -232,17 +225,20 @@ class HubController {
 
       const updateData = {};
       if (name !== undefined) updateData.name = name;
-      if (description !== undefined) updateData.description = description;
       if (address !== undefined) updateData.address = address;
-      if (latitude !== undefined) updateData.latitude = latitude;
-      if (longitude !== undefined) updateData.longitude = longitude;
-      if (phone !== undefined) updateData.phone = phone;
-      if (operating_hours !== undefined) updateData.operating_hours = operating_hours;
-      if (hub_type !== undefined) updateData.hub_type = hub_type;
+      if (capacity_m3 !== undefined) updateData.capacity_m3 = parseFloat(capacity_m3);
       
-      // Only admins can change is_active status
-      if (is_active !== undefined && req.user.user_type === 'admin') {
-        updateData.is_active = is_active;
+      // Handle location update
+      if (latitude !== undefined && longitude !== undefined) {
+        updateData.location = {
+          type: 'Point',
+          coordinates: [parseFloat(longitude), parseFloat(latitude)]
+        };
+      }
+      
+      // Only admins can change status
+      if (status !== undefined && req.user.role === 'admin') {
+        updateData.status = status;
       }
 
       await hub.update(updateData);
@@ -253,7 +249,19 @@ class HubController {
         success: true,
         message: 'Hub updated successfully',
         data: {
-          hub: hub.toJSON()
+          hub: {
+            hub_id: hub.hub_id,
+            name: hub.name,
+            address: hub.address,
+            location: hub.location,
+            capacity_m3: hub.capacity_m3,
+            current_utilization_m3: hub.current_utilization_m3,
+            status: hub.status,
+            owner_id: hub.owner_id,
+            description: hub.description,
+            created_at: hub.created_at,
+            updated_at: hub.updated_at
+          }
         }
       });
 
@@ -281,7 +289,7 @@ class HubController {
       }
 
       // Check if user can delete this hub
-      if (req.user.user_type !== 'admin' && req.user.id !== hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only delete your own hubs.'
@@ -291,12 +299,9 @@ class HubController {
       // Check if hub has active orders
       const activeOrders = await Order.count({
         where: {
-          [Op.or]: [
-            { source_hub_id: id },
-            { destination_hub_id: id }
-          ],
+          hub_id: id,
           status: {
-            [Op.in]: ['pending', 'confirmed', 'picked_up', 'in_transit']
+            [Op.in]: ['pending', 'confirmed', 'ready_for_pickup', 'picked_up', 'in_transit']
           }
         }
       });
@@ -417,19 +422,14 @@ class HubController {
       }
 
       // Check if user can access hub orders
-      if (req.user.user_type !== 'admin' && req.user.id !== hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only view orders for your own hubs.'
         });
       }
 
-      let whereClause = {
-        [Op.or]: [
-          { source_hub_id: id },
-          { destination_hub_id: id }
-        ]
-      };
+      let whereClause = { hub_id: id };
 
       if (status) {
         whereClause.status = status;
@@ -441,12 +441,12 @@ class HubController {
           {
             model: User,
             as: 'customer',
-            attributes: ['id', 'full_name', 'email', 'phone']
+            attributes: ['user_id', 'first_name', 'last_name', 'email', 'phone_number']
           },
           {
             model: User,
             as: 'courier',
-            attributes: ['id', 'full_name', 'phone', 'vehicle_type']
+            attributes: ['user_id', 'first_name', 'last_name', 'phone_number']
           }
         ],
         order: [['created_at', sort.toUpperCase()]],
@@ -483,7 +483,7 @@ class HubController {
   // Get user's hubs (for hub owners)
   static async getUserHubs(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.user_id;
 
       const hubs = await Hub.findAll({
         where: { owner_id: userId },
@@ -491,12 +491,12 @@ class HubController {
           {
             model: Inventory,
             as: 'inventory',
-            attributes: ['id', 'product_id', 'quantity', 'low_stock_threshold'],
+            attributes: ['inventory_id', 'product_id', 'quantity', 'low_stock_threshold'],
             include: [
               {
                 model: Product,
                 as: 'product',
-                attributes: ['id', 'name', 'category']
+                attributes: ['product_id', 'name', 'category']
               }
             ]
           }

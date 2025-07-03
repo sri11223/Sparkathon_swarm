@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   const Inventory = sequelize.define('Inventory', {
-    id: {
+    inventory_id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
@@ -12,7 +12,7 @@ module.exports = (sequelize) => {
       allowNull: false,
       references: {
         model: 'hubs',
-        key: 'id'
+        key: 'hub_id'
       }
     },
     product_id: {
@@ -20,7 +20,7 @@ module.exports = (sequelize) => {
       allowNull: false,
       references: {
         model: 'products',
-        key: 'id'
+        key: 'product_id'
       }
     },
     quantity: {
@@ -126,6 +126,21 @@ module.exports = (sequelize) => {
 
   Inventory.prototype.releaseReservedStock = function(quantity) {
     this.reserved_quantity = Math.max(0, this.reserved_quantity - quantity);
+  };
+
+  // Define associations
+  Inventory.associate = function(models) {
+    // Inventory belongs to a hub
+    Inventory.belongsTo(models.Hub, {
+      foreignKey: 'hub_id',
+      as: 'hub'
+    });
+
+    // Inventory belongs to a product
+    Inventory.belongsTo(models.Product, {
+      foreignKey: 'product_id',
+      as: 'product'
+    });
   };
 
   return Inventory;

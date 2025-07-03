@@ -16,6 +16,11 @@ const { query, body } = require('express-validator');
 // @access  Public
 router.get('/', validatePagination, HubController.getAllHubs);
 
+// @desc    Get user's hubs (MUST be before /:id route to avoid conflicts)
+// @route   GET /api/hubs/my-hubs
+// @access  Private (Hub Owner)
+router.get('/my-hubs', authenticate, authorize('hub_owner'), HubController.getUserHubs);
+
 // @desc    Get hub by ID
 // @route   GET /api/hubs/:id
 // @access  Public
@@ -24,17 +29,17 @@ router.get('/:id', validateUUID('id'), HubController.getHubById);
 // @desc    Create new hub
 // @route   POST /api/hubs
 // @access  Private (Hub Owner, Admin)
-router.post('/', authenticate, authorize('hubowner', 'admin'), validateHubCreation, HubController.createHub);
+router.post('/', authenticate, authorize('hub_owner', 'admin'), validateHubCreation, HubController.createHub);
 
 // @desc    Update hub
 // @route   PUT /api/hubs/:id
 // @access  Private (Hub Owner, Admin)
-router.put('/:id', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), HubController.updateHub);
+router.put('/:id', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), HubController.updateHub);
 
 // @desc    Delete hub
 // @route   DELETE /api/hubs/:id
 // @access  Private (Hub Owner, Admin)
-router.delete('/:id', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), HubController.deleteHub);
+router.delete('/:id', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), HubController.deleteHub);
 
 // @desc    Get hub inventory
 // @route   GET /api/hubs/:id/inventory
@@ -44,18 +49,13 @@ router.get('/:id/inventory', validateUUID('id'), validatePagination, HubControll
 // @desc    Get hub orders
 // @route   GET /api/hubs/:id/orders
 // @access  Private (Hub Owner, Admin)
-router.get('/:id/orders', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), validatePagination, HubController.getHubOrders);
-
-// @desc    Get user's hubs
-// @route   GET /api/hubs/my/hubs
-// @access  Private (Hub Owner)
-router.get('/my/hubs', authenticate, authorize('hubowner'), HubController.getUserHubs);
+router.get('/:id/orders', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), validatePagination, HubController.getHubOrders);
 
 // Inventory management routes
 // @desc    Add inventory to hub
 // @route   POST /api/hubs/inventory
 // @access  Private (Hub Owner, Admin)
-router.post('/inventory', authenticate, authorize('hubowner', 'admin'), [
+router.post('/inventory', authenticate, authorize('hub_owner', 'admin'), [
   body('hub_id').isUUID().withMessage('Valid hub ID required'),
   body('product_id').isUUID().withMessage('Valid product ID required'),
   body('quantity').isInt({ min: 0 }).withMessage('Quantity must be non-negative integer'),
@@ -66,7 +66,7 @@ router.post('/inventory', authenticate, authorize('hubowner', 'admin'), [
 // @desc    Update inventory
 // @route   PUT /api/hubs/inventory/:id
 // @access  Private (Hub Owner, Admin)
-router.put('/inventory/:id', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), validateInventoryUpdate, InventoryController.updateInventory);
+router.put('/inventory/:id', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), validateInventoryUpdate, InventoryController.updateInventory);
 
 // @desc    Get inventory by ID
 // @route   GET /api/hubs/inventory/:id
@@ -76,24 +76,24 @@ router.get('/inventory/:id', authenticate, validateUUID('id'), InventoryControll
 // @desc    Remove inventory
 // @route   DELETE /api/hubs/inventory/:id
 // @access  Private (Hub Owner, Admin)
-router.delete('/inventory/:id', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), InventoryController.removeInventory);
+router.delete('/inventory/:id', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), InventoryController.removeInventory);
 
 // @desc    Get low stock alerts
 // @route   GET /api/hubs/inventory/alerts/low-stock
 // @access  Private (Hub Owner, Admin)
-router.get('/inventory/alerts/low-stock', authenticate, authorize('hubowner', 'admin'), [
+router.get('/inventory/alerts/low-stock', authenticate, authorize('hub_owner', 'admin'), [
   query('hub_id').optional().isUUID().withMessage('Valid hub ID required')
 ], InventoryController.getLowStockAlerts);
 
 // @desc    Get inventory summary
 // @route   GET /api/hubs/inventory/summary
 // @access  Private (Hub Owner, Admin)
-router.get('/inventory/summary', authenticate, authorize('hubowner', 'admin'), InventoryController.getInventorySummary);
+router.get('/inventory/summary', authenticate, authorize('hub_owner', 'admin'), InventoryController.getInventorySummary);
 
 // @desc    Bulk update inventory
 // @route   POST /api/hubs/inventory/bulk-update
 // @access  Private (Hub Owner, Admin)
-router.post('/inventory/bulk-update', authenticate, authorize('hubowner', 'admin'), [
+router.post('/inventory/bulk-update', authenticate, authorize('hub_owner', 'admin'), [
   body('hub_id').isUUID().withMessage('Valid hub ID required'),
   body('updates').isArray({ min: 1 }).withMessage('Updates array required'),
   body('updates.*.product_id').isUUID().withMessage('Valid product ID required for each update'),

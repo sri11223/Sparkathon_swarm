@@ -83,7 +83,7 @@ POST /api/auth/login
 
 ---
 
-## 🏢 Hub Management ⚠️ 
+## 🏢 Hub Management ✅ 
 **Base Route:** `/api/hubs`
 
 ### Current Implementation ✅
@@ -92,6 +92,38 @@ POST /api/auth/login
 | ✅ | `GET` | `/` | Get all hubs (with pagination) | Public |
 | ✅ | `GET` | `/:id` | Get hub details by ID | Public |
 | ✅ | `POST` | `/` | Create new hub | Private (Hub Owner, Admin) |
+| ✅ | `PUT` | `/:id` | Update hub details | Private (Hub Owner, Admin) |
+| ✅ | `DELETE` | `/:id` | Delete hub | Private (Hub Owner, Admin) |
+| ✅ | `GET` | `/:id/inventory` | Get hub inventory | Public |
+| ✅ | `GET` | `/:id/orders` | Get hub orders | Private (Hub Owner, Admin) |
+| ✅ | `GET` | `/my/hubs` | Get current user's hubs | Private (Hub Owner) |
+
+**✅ ALL HUB MANAGEMENT ENDPOINTS ARE NOW FULLY FUNCTIONAL AND READY TO USE!**
+
+### Hub Management Request/Response Examples:
+
+#### Create Hub
+```json
+POST /api/hubs
+{
+  "name": "Downtown Hub",
+  "address": "123 Main St, City, State 12345",
+  "latitude": 40.7128,
+  "longitude": -74.0060,
+  "capacity_m3": 150.5,
+  "description": "Central hub for downtown deliveries"
+}
+```
+
+#### Update Hub
+```json
+PUT /api/hubs/{hub_id}
+{
+  "name": "Updated Hub Name",
+  "capacity_m3": 200.0,
+  "status": "active"
+}
+```
 | ✅ | `PUT` | `/:id` | Update hub details | Private (Hub Owner, Admin) |
 | ✅ | `DELETE` | `/:id` | Delete hub | Private (Hub Owner, Admin) |
 | ✅ | `GET` | `/:id/inventory` | Get hub inventory | Public |

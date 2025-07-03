@@ -24,7 +24,7 @@ class InventoryController {
       }
 
       // Check if user can manage this hub's inventory
-      if (req.user.user_type !== 'admin' && req.user.id !== hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only manage inventory for your own hubs.'
@@ -64,17 +64,17 @@ class InventoryController {
       }
 
       // Get updated inventory with product details
-      const updatedInventory = await Inventory.findByPk(inventory.id, {
+      const updatedInventory = await Inventory.findByPk(inventory.inventory_id, {
         include: [
           {
             model: Product,
             as: 'product',
-            attributes: ['id', 'name', 'description', 'category', 'base_price']
+            attributes: ['product_id', 'name', 'description', 'category', 'base_price']
           },
           {
             model: Hub,
             as: 'hub',
-            attributes: ['id', 'name', 'address']
+            attributes: ['hub_id', 'name', 'address']
           }
         ]
       });
@@ -132,7 +132,7 @@ class InventoryController {
       }
 
       // Check if user can update this inventory
-      if (req.user.user_type !== 'admin' && req.user.id !== inventory.hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== inventory.hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only update inventory for your own hubs.'
@@ -194,9 +194,9 @@ class InventoryController {
 
       // Check if user can view this inventory
       const canView = 
-        req.user.user_type === 'admin' ||
-        req.user.id === inventory.hub.owner_id ||
-        req.user.user_type === 'customer'; // Customers can view for shopping
+        req.user.role === 'admin' ||
+        req.user.user_id === inventory.hub.owner_id ||
+        req.user.role === 'customer'; // Customers can view for shopping
 
       if (!canView) {
         return res.status(403).json({
@@ -251,7 +251,7 @@ class InventoryController {
       }
 
       // Check if user can remove this inventory
-      if (req.user.user_type !== 'admin' && req.user.id !== inventory.hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== inventory.hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You can only remove inventory for your own hubs.'
@@ -289,12 +289,12 @@ class InventoryController {
       };
 
       // Filter by hub for hub owners
-      if (req.user.user_type === 'hubowner') {
+      if (req.user.role === 'hub_owner') {
         const userHubs = await Hub.findAll({
-          where: { owner_id: req.user.id },
-          attributes: ['id']
+          where: { owner_id: req.user.user_id },
+          attributes: ['hub_id']
         });
-        const hubIds = userHubs.map(hub => hub.id);
+        const hubIds = userHubs.map(hub => hub.hub_id);
         whereClause.hub_id = { [Op.in]: hubIds };
       } else if (hub_id) {
         whereClause.hub_id = hub_id;
@@ -342,8 +342,8 @@ class InventoryController {
       let hubCondition = {};
 
       // Filter by user's hubs if hub owner
-      if (req.user.user_type === 'hubowner') {
-        hubCondition.owner_id = req.user.id;
+      if (req.user.role === 'hub_owner') {
+        hubCondition.owner_id = req.user.user_id;
       }
 
       const summary = await Inventory.findAll({
@@ -433,7 +433,7 @@ class InventoryController {
         });
       }
 
-      if (req.user.user_type !== 'admin' && req.user.id !== hub.owner_id) {
+      if (req.user.role !== 'admin' && req.user.user_id !== hub.owner_id) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'

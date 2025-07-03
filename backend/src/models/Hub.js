@@ -8,13 +8,13 @@ module.exports = (sequelize) => {
         foreignKey: 'owner_id',
         as: 'owner'
       });
-      // A hub can have many products in its inventory
-      Hub.belongsToMany(models.Product, {
-        through: 'hub_inventory',
+      
+      // A hub has many inventory items
+      Hub.hasMany(models.Inventory, {
         foreignKey: 'hub_id',
-        otherKey: 'product_id',
-        as: 'products'
+        as: 'inventory'
       });
+      
       // A hub can fulfill many orders
       Hub.hasMany(models.Order, {
         foreignKey: 'hub_id',
@@ -59,6 +59,10 @@ module.exports = (sequelize) => {
     current_utilization_m3: {
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 0,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     status: {
       type: DataTypes.STRING(20),

@@ -106,14 +106,15 @@ const validateHubCreation = [
   body('longitude')
     .isFloat({ min: -180, max: 180 })
     .withMessage('Longitude must be between -180 and 180'),
-  body('phone')
+  body('capacity_m3')
     .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
-    .withMessage('Please provide a valid phone number'),
-  body('operating_hours')
+    .isFloat({ min: 1 })
+    .withMessage('Capacity must be a positive number'),
+  body('description')
     .optional()
-    .isObject()
-    .withMessage('Operating hours must be an object'),
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters'),
   handleValidationErrors
 ];
 

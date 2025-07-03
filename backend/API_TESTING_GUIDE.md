@@ -403,11 +403,14 @@ curl -X GET http://localhost:3000/api/auth/profile \
         "hub_id": "456e7890-e89b-12d3-a456-426614174001",
         "name": "Downtown Hub",
         "address": "123 Main St, City, State",
-        "latitude": 40.7128,
-        "longitude": -74.0060,
-        "phone_number": "+1234567891",
-        "operating_hours": "9AM-6PM",
-        "is_active": true
+        "location": {
+          "type": "Point",
+          "coordinates": [-74.0060, 40.7128]
+        },
+        "capacity_m3": 100.0,
+        "current_utilization_m3": 0.0,
+        "status": "active",
+        "description": "A community hub serving downtown area"
       }
     ],
     "pagination": {
@@ -449,11 +452,14 @@ curl -X GET "http://localhost:3000/api/hubs?page=1&limit=10"
       "hub_id": "456e7890-e89b-12d3-a456-426614174001",
       "name": "Downtown Hub",
       "address": "123 Main St, City, State",
-      "latitude": 40.7128,
-      "longitude": -74.0060,
-      "phone_number": "+1234567891",
-      "operating_hours": "9AM-6PM",
-      "is_active": true,
+      "location": {
+        "type": "Point",
+        "coordinates": [-74.0060, 40.7128]
+      },
+      "capacity_m3": 100.0,
+      "current_utilization_m3": 0.0,
+      "status": "active",
+      "description": "A community hub serving downtown area",
       "owner": {
         "user_id": "123e4567-e89b-12d3-a456-426614174000",
         "first_name": "John",
@@ -488,8 +494,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
   "address": "456 Community St, City, State",
   "latitude": 40.7589,
   "longitude": -73.9851,
-  "phone_number": "+1234567892",
-  "operating_hours": "8AM-8PM",
+  "capacity_m3": 150.0,
   "description": "A community hub serving the neighborhood"
 }
 ```
@@ -504,12 +509,14 @@ Authorization: Bearer YOUR_JWT_TOKEN
       "hub_id": "789e1234-e89b-12d3-a456-426614174002",
       "name": "My Community Hub",
       "address": "456 Community St, City, State",
-      "latitude": 40.7589,
-      "longitude": -73.9851,
-      "phone_number": "+1234567892",
-      "operating_hours": "8AM-8PM",
+      "location": {
+        "type": "Point",
+        "coordinates": [-73.9851, 40.7589]
+      },
+      "capacity_m3": 150.0,
+      "current_utilization_m3": 0.0,
+      "status": "active",
       "description": "A community hub serving the neighborhood",
-      "is_active": true,
       "owner_id": "123e4567-e89b-12d3-a456-426614174000"
     }
   }
@@ -526,10 +533,551 @@ curl -X POST http://localhost:3000/api/hubs \
     "address": "456 Community St, City, State",
     "latitude": 40.7589,
     "longitude": -73.9851,
-    "phone_number": "+1234567892",
-    "operating_hours": "8AM-8PM",
+    "capacity_m3": 150.0,
     "description": "A community hub serving the neighborhood"
   }'
+```
+
+---
+
+### 4. Update Hub (Authenticated)
+**Endpoint:** `PUT /api/hubs/:id`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `id` - Hub ID (UUID)
+
+#### Request Body:
+```json
+{
+  "name": "Updated Community Hub",
+  "address": "789 Updated St, City, State",
+  "latitude": 40.7750,
+  "longitude": -73.9800,
+  "capacity_m3": 200.0,
+  "description": "Updated description for the community hub"
+}
+```
+
+#### Access Control:
+- **Only the hub owner can update their own hubs**
+- **Admins can update any hub**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Hub updated successfully",
+  "data": {
+    "hub": {
+      "hub_id": "789e1234-e89b-12d3-a456-426614174002",
+      "name": "Updated Community Hub",
+      "address": "789 Updated St, City, State",
+      "location": {
+        "type": "Point",
+        "coordinates": [-73.9800, 40.7750]
+      },
+      "capacity_m3": 200.0,
+      "current_utilization_m3": 0.0,
+      "status": "active",
+      "description": "Updated description for the community hub",
+      "owner_id": "123e4567-e89b-12d3-a456-426614174000",
+      "updated_at": "2025-07-03T13:00:00.000Z"
+    }
+  }
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only update your own hubs."
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X PUT http://localhost:3000/api/hubs/789e1234-e89b-12d3-a456-426614174002 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Updated Community Hub",
+    "address": "789 Updated St, City, State",
+    "latitude": 40.7750,
+    "longitude": -73.9800,
+    "capacity_m3": 200.0,
+    "description": "Updated description for the community hub"
+  }'
+```
+
+---
+
+### 5. Delete Hub (Authenticated)
+**Endpoint:** `DELETE /api/hubs/:id`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `id` - Hub ID (UUID)
+
+#### Access Control:
+- **Only the hub owner can delete their own hubs**
+- **Admins can delete any hub**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Hub deleted successfully"
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only delete your own hubs."
+}
+```
+
+#### Error Response for Hub Not Found (404):
+```json
+{
+  "success": false,
+  "message": "Hub not found"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X DELETE http://localhost:3000/api/hubs/789e1234-e89b-12d3-a456-426614174002 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 6. Get Hub Inventory
+**Endpoint:** `GET /api/hubs/:id/inventory`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+(No headers required for public endpoint)
+```
+
+#### URL Parameters:
+- `id` - Hub ID (UUID)
+
+#### Query Parameters:
+- `page` (optional) - Page number (default: 1)
+- `limit` (optional) - Items per page (default: 20)
+- `category` (optional) - Filter by product category
+- `in_stock` (optional) - Filter by stock availability (true/false)
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Hub inventory retrieved successfully",
+  "data": {
+    "hub": {
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "name": "Downtown Hub"
+    },
+    "inventory": [
+      {
+        "inventory_id": "inv12345-e89b-12d3-a456-426614174005",
+        "product_id": "abc12345-e89b-12d3-a456-426614174003",
+        "product_name": "Organic Apples",
+        "category": "Fruits",
+        "quantity": 50,
+        "price": 3.99,
+        "unit": "lb",
+        "last_updated": "2025-07-03T12:00:00.000Z"
+      },
+      {
+        "inventory_id": "inv67890-e89b-12d3-a456-426614174006",
+        "product_id": "def67890-e89b-12d3-a456-426614174007",
+        "product_name": "Fresh Bread",
+        "category": "Bakery",
+        "quantity": 0,
+        "price": 2.50,
+        "unit": "loaf",
+        "last_updated": "2025-07-03T11:30:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 2,
+      "pages": 1
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/hubs/456e7890-e89b-12d3-a456-426614174001/inventory?in_stock=true&category=Fruits"
+```
+
+---
+
+### 7. Get Hub Orders
+**Endpoint:** `GET /api/hubs/:id/orders`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `id` - Hub ID (UUID)
+
+#### Query Parameters:
+- `page` (optional) - Page number (default: 1)
+- `limit` (optional) - Items per page (default: 20)
+- `status` (optional) - Filter by order status
+- `date_from` (optional) - Filter orders from date (YYYY-MM-DD)
+- `date_to` (optional) - Filter orders to date (YYYY-MM-DD)
+
+#### Access Control:
+- **Only hub owners can view orders for their hubs**
+- **Admins can view orders for any hub**
+- **Customers cannot access this endpoint**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Hub orders retrieved successfully",
+  "data": {
+    "hub": {
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "name": "Downtown Hub"
+    },
+    "orders": [
+      {
+        "order_id": "ord12345-e89b-12d3-a456-426614174008",
+        "customer": {
+          "user_id": "123e4567-e89b-12d3-a456-426614174000",
+          "first_name": "John",
+          "last_name": "Doe"
+        },
+        "status": "pending",
+        "total_amount": 25.99,
+        "order_items": [
+          {
+            "product_name": "Organic Apples",
+            "quantity": 3,
+            "unit_price": 3.99
+          },
+          {
+            "product_name": "Fresh Bread",
+            "quantity": 2,
+            "unit_price": 2.50
+          }
+        ],
+        "delivery_address": "789 Customer St, City, State",
+        "created_at": "2025-07-03T11:00:00.000Z",
+        "updated_at": "2025-07-03T11:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "pages": 1
+    }
+  }
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only view orders for your own hubs."
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/hubs/456e7890-e89b-12d3-a456-426614174001/orders?status=pending&date_from=2025-07-01" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+### 8. Get User's Hubs (Authenticated)
+**Endpoint:** `GET /api/hubs/my-hubs`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### Query Parameters:
+- `page` (optional) - Page number (default: 1)
+- `limit` (optional) - Items per page (default: 20)
+- `is_active` (optional) - Filter by active status (true/false)
+
+#### Access Control:
+- **Only hub owners can access this endpoint**
+- **Returns only hubs owned by the authenticated user**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "User hubs retrieved successfully",
+  "data": {
+    "hubs": [
+      {
+        "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+        "name": "Downtown Hub",
+        "address": "123 Main St, City, State",
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "phone_number": "+1234567891",
+        "operating_hours": "9AM-6PM",
+        "is_active": true,
+        "total_inventory_items": 25,
+        "pending_orders": 3,
+        "total_revenue": 1250.75,
+        "created_at": "2025-06-15T10:00:00.000Z",
+        "updated_at": "2025-07-03T12:00:00.000Z"
+      },
+      {
+        "hub_id": "789e1234-e89b-12d3-a456-426614174002",
+        "name": "Community Hub",
+        "address": "456 Community St, City, State",
+        "latitude": 40.7589,
+        "longitude": -73.9851,
+        "phone_number": "+1234567892",
+        "operating_hours": "8AM-8PM",
+        "is_active": true,
+        "total_inventory_items": 18,
+        "pending_orders": 1,
+        "total_revenue": 890.50,
+        "created_at": "2025-06-20T14:30:00.000Z",
+        "updated_at": "2025-07-02T16:45:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 2,
+      "pages": 1
+    },
+    "summary": {
+      "total_hubs": 2,
+      "active_hubs": 2,
+      "total_revenue": 2141.25,
+      "total_pending_orders": 4
+    }
+  }
+}
+```
+
+#### Error Response for Wrong Role (403):
+```json
+{
+  "success": false,
+  "message": "Only hub owners can access this endpoint"
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X GET "http://localhost:3000/api/hubs/my-hubs?is_active=true" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+---
+
+## 📦 **Inventory Management Endpoints** ✅
+
+### 1. Add Inventory Item to Hub (Authenticated)
+**Endpoint:** `POST /api/hubs/:hubId/inventory`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `hubId` - Hub ID (UUID)
+
+#### Request Body:
+```json
+{
+  "product_id": "abc12345-e89b-12d3-a456-426614174003",
+  "quantity": 100,
+  "price": 4.99,
+  "unit": "lb",
+  "expiry_date": "2025-07-15",
+  "notes": "Fresh organic apples from local farm"
+}
+```
+
+#### Access Control:
+- **Only hub owners can add inventory to their hubs**
+- **Admins can add inventory to any hub**
+
+#### Expected Response (201):
+```json
+{
+  "success": true,
+  "message": "Inventory item added successfully",
+  "data": {
+    "inventory": {
+      "inventory_id": "inv78901-e89b-12d3-a456-426614174009",
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "product_id": "abc12345-e89b-12d3-a456-426614174003",
+      "quantity": 100,
+      "price": 4.99,
+      "unit": "lb",
+      "expiry_date": "2025-07-15T00:00:00.000Z",
+      "notes": "Fresh organic apples from local farm",
+      "created_at": "2025-07-03T13:30:00.000Z",
+      "updated_at": "2025-07-03T13:30:00.000Z"
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X POST http://localhost:3000/api/hubs/456e7890-e89b-12d3-a456-426614174001/inventory \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "product_id": "abc12345-e89b-12d3-a456-426614174003",
+    "quantity": 100,
+    "price": 4.99,
+    "unit": "lb",
+    "expiry_date": "2025-07-15",
+    "notes": "Fresh organic apples from local farm"
+  }'
+```
+
+---
+
+### 2. Update Inventory Item (Authenticated)
+**Endpoint:** `PUT /api/inventory/:id`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `id` - Inventory Item ID (UUID)
+
+#### Request Body:
+```json
+{
+  "quantity": 75,
+  "price": 5.49,
+  "expiry_date": "2025-07-20",
+  "notes": "Updated price and quantity"
+}
+```
+
+#### Access Control:
+- **Only hub owners can update inventory in their hubs**
+- **Admins can update any inventory item**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Inventory item updated successfully",
+  "data": {
+    "inventory": {
+      "inventory_id": "inv78901-e89b-12d3-a456-426614174009",
+      "hub_id": "456e7890-e89b-12d3-a456-426614174001",
+      "product_id": "abc12345-e89b-12d3-a456-426614174003",
+      "quantity": 75,
+      "price": 5.49,
+      "unit": "lb",
+      "expiry_date": "2025-07-20T00:00:00.000Z",
+      "notes": "Updated price and quantity",
+      "updated_at": "2025-07-03T14:00:00.000Z"
+    }
+  }
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X PUT http://localhost:3000/api/inventory/inv78901-e89b-12d3-a456-426614174009 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "quantity": 75,
+    "price": 5.49,
+    "expiry_date": "2025-07-20",
+    "notes": "Updated price and quantity"
+  }'
+```
+
+---
+
+### 3. Delete Inventory Item (Authenticated)
+**Endpoint:** `DELETE /api/inventory/:id`
+**Status:** ✅ READY
+
+#### Request Headers:
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+#### URL Parameters:
+- `id` - Inventory Item ID (UUID)
+
+#### Access Control:
+- **Only hub owners can delete inventory from their hubs**
+- **Admins can delete any inventory item**
+
+#### Expected Response (200):
+```json
+{
+  "success": true,
+  "message": "Inventory item deleted successfully"
+}
+```
+
+#### Error Response for Unauthorized (403):
+```json
+{
+  "success": false,
+  "message": "Access denied. You can only manage inventory for your own hubs."
+}
+```
+
+#### Testing with curl:
+```bash
+curl -X DELETE http://localhost:3000/api/inventory/inv78901-e89b-12d3-a456-426614174009 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ---
