@@ -3,19 +3,15 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class Product extends Model {
     static associate(models) {
-      // A product can be in many hubs
-      Product.belongsToMany(models.Hub, {
-        through: 'hub_inventory',
+      // A product has many inventory entries
+      Product.hasMany(models.Inventory, {
         foreignKey: 'product_id',
-        otherKey: 'hub_id',
-        as: 'hubs'
+        as: 'inventoryEntries'
       });
-      // A product can be part of many orders
-      Product.belongsToMany(models.Order, {
-        through: 'order_items',
+      // A product can be part of many order items
+      Product.hasMany(models.OrderItem, {
         foreignKey: 'product_id',
-        otherKey: 'order_id',
-        as: 'orders'
+        as: 'orderItems'
       });
     }
   }
@@ -39,7 +35,15 @@ module.exports = (sequelize) => {
     description: {
       type: DataTypes.TEXT,
     },
+    category: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
     price: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    base_price: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
@@ -49,6 +53,11 @@ module.exports = (sequelize) => {
     },
     image_url: {
       type: DataTypes.TEXT,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     },
   }, {
     sequelize,

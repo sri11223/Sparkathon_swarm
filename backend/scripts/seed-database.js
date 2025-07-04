@@ -146,10 +146,22 @@ const seedDatabase = async () => {
     console.log(`🌱 Creating ${PRODUCT_COUNT} products...`);
     let createdProducts = [];
     for (let i = 0; i < PRODUCT_COUNT; i++) {
+        const price = faker.commerce.price({ min: 1, max: 200 });
         const res = await client.query(
-            `INSERT INTO products (product_id, sku, name, description, price, volume_m3, image_url, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) RETURNING *`,
-            [faker.string.uuid(), `WALMART-${faker.string.alphanumeric(8).toUpperCase()}`, faker.commerce.productName(), faker.commerce.productDescription(), faker.commerce.price({ min: 1, max: 200 }), faker.number.float({ min: 0.001, max: 0.1, precision: 3 }), faker.image.urlLoremFlickr({ category: 'technics' })]
+            `INSERT INTO products (product_id, sku, name, description, category, price, base_price, volume_m3, image_url, is_active, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()) RETURNING *`,
+            [
+                faker.string.uuid(), 
+                `WALMART-${faker.string.alphanumeric(8).toUpperCase()}`, 
+                faker.commerce.productName(), 
+                faker.commerce.productDescription(), 
+                faker.commerce.department(),
+                price,
+                price, // base_price same as price initially
+                faker.number.float({ min: 0.001, max: 0.1, precision: 3 }), 
+                faker.image.urlLoremFlickr({ category: 'technics' }),
+                true // is_active
+            ]
         );
         createdProducts.push(res.rows[0]);
     }

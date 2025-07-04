@@ -13,12 +13,10 @@ module.exports = (sequelize) => {
         foreignKey: 'hub_id',
         as: 'hub'
       });
-      // An order can have many products
-      Order.belongsToMany(models.Product, {
-        through: 'order_items',
+      // An order has many order items
+      Order.hasMany(models.OrderItem, {
         foreignKey: 'order_id',
-        otherKey: 'product_id',
-        as: 'products'
+        as: 'orderItems'
       });
       // An order has one delivery record associated with it
       Order.hasOne(models.Delivery, {

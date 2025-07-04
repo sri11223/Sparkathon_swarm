@@ -7,6 +7,8 @@ const Product = require('./Product')(sequelize);
 const Inventory = require('./Inventory')(sequelize);
 const Order = require('./Order')(sequelize);
 const OrderItem = require('./OrderItem')(sequelize);
+const Delivery = require('./Delivery')(sequelize);
+const CourierVehicle = require('./CourierVehicle')(sequelize);
 const DriveThruSlot = require('./DriveThruSlot')(sequelize);
 const DriveThruConfiguration = require('./DriveThruConfiguration')(sequelize);
 
@@ -40,13 +42,8 @@ const setupAssociations = () => {
     onDelete: 'CASCADE' 
   });
   Hub.hasMany(Order, { 
-    foreignKey: 'source_hub_id', 
-    as: 'sourceOrders',
-    onDelete: 'SET NULL' 
-  });
-  Hub.hasMany(Order, { 
-    foreignKey: 'destination_hub_id', 
-    as: 'destinationOrders',
+    foreignKey: 'hub_id', 
+    as: 'orders',
     onDelete: 'SET NULL' 
   });
   Hub.hasOne(DriveThruConfiguration, {
@@ -92,12 +89,8 @@ const setupAssociations = () => {
     as: 'courier' 
   });
   Order.belongsTo(Hub, { 
-    foreignKey: 'source_hub_id', 
-    as: 'sourceHub' 
-  });
-  Order.belongsTo(Hub, { 
-    foreignKey: 'destination_hub_id', 
-    as: 'destinationHub' 
+    foreignKey: 'hub_id', 
+    as: 'hub' 
   });
   Order.hasMany(OrderItem, { 
     foreignKey: 'order_id', 
@@ -148,6 +141,54 @@ const setupAssociations = () => {
     foreignKey: 'hub_id',
     as: 'hub'
   });
+
+  // Delivery associations
+  Delivery.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+  });
+  Delivery.belongsTo(User, {
+    foreignKey: 'courier_id',
+    as: 'courier'
+  });
+
+  // Order has one delivery
+  Order.hasOne(Delivery, {
+    foreignKey: 'order_id',
+    as: 'delivery',
+    onDelete: 'CASCADE'
+  });
+
+  // User (courier) has many deliveries
+  User.hasMany(Delivery, {
+    foreignKey: 'courier_id',
+    as: 'deliveries',
+    onDelete: 'SET NULL'
+  });
+
+  // CourierVehicle associations
+  CourierVehicle.belongsTo(User, {
+    foreignKey: 'courier_id',
+    as: 'courier'
+  });
+  CourierVehicle.hasMany(Delivery, {
+    foreignKey: 'vehicle_id',
+    as: 'deliveries',
+    onDelete: 'SET NULL'
+  });
+
+  // User (courier) has many vehicles
+  User.hasMany(CourierVehicle, {
+    foreignKey: 'courier_id',
+    as: 'vehicles',
+    onDelete: 'CASCADE'
+  });
+
+  // Delivery belongs to a vehicle
+  Delivery.belongsTo(CourierVehicle, {
+    foreignKey: 'vehicle_id',
+    as: 'vehicle'
+  });
 };
 
 // Setup associations
@@ -174,6 +215,8 @@ module.exports = {
   Inventory,
   Order,
   OrderItem,
+  Delivery,
+  CourierVehicle,
   DriveThruSlot,
   DriveThruConfiguration,
   syncDatabase

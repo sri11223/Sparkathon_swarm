@@ -114,12 +114,12 @@ class InventoryController {
           {
             model: Hub,
             as: 'hub',
-            attributes: ['id', 'name', 'owner_id']
+            attributes: ['hub_id', 'name', 'owner_id']
           },
           {
             model: Product,
             as: 'product',
-            attributes: ['id', 'name']
+            attributes: ['product_id', 'name']
           }
         ]
       });
@@ -180,7 +180,7 @@ class InventoryController {
           {
             model: Hub,
             as: 'hub',
-            attributes: ['id', 'name', 'address', 'owner_id']
+            attributes: ['hub_id', 'name', 'address', 'owner_id']
           }
         ]
       });
@@ -233,12 +233,12 @@ class InventoryController {
           {
             model: Hub,
             as: 'hub',
-            attributes: ['id', 'name', 'owner_id']
+            attributes: ['hub_id', 'name', 'owner_id']
           },
           {
             model: Product,
             as: 'product',
-            attributes: ['id', 'name']
+            attributes: ['product_id', 'name']
           }
         ]
       });
@@ -306,12 +306,12 @@ class InventoryController {
           {
             model: Product,
             as: 'product',
-            attributes: ['id', 'name', 'category']
+            attributes: ['product_id', 'name', 'category']
           },
           {
             model: Hub,
             as: 'hub',
-            attributes: ['id', 'name', 'address']
+            attributes: ['hub_id', 'name', 'address']
           }
         ],
         order: [['quantity', 'ASC']]
