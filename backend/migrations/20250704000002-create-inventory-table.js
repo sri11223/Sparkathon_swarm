@@ -2,6 +2,12 @@
 
 module.exports = {
   async up (queryInterface, Sequelize) {
+    // Check if inventory table exists, if so drop it first
+    const tableExists = await queryInterface.tableExists('inventory');
+    if (tableExists) {
+      await queryInterface.dropTable('inventory');
+    }
+    
     // Create inventory table with proper structure
     await queryInterface.createTable('inventory', {
       inventory_id: {
@@ -91,19 +97,34 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('inventory', ['hub_id', 'product_id'], {
-      unique: true,
-      name: 'idx_inventory_hub_product'
-    });
+    // Add indexes (with error handling in case they exist)
+    try {
+      await queryInterface.addIndex('inventory', ['hub_id', 'product_id'], {
+        unique: true,
+        name: 'idx_inventory_hub_product'
+      });
+    } catch (error) {
+      // Index might already exist, continue
+      console.log('Index idx_inventory_hub_product already exists, skipping...');
+    }
 
-    await queryInterface.addIndex('inventory', ['quantity', 'low_stock_threshold'], {
-      name: 'idx_inventory_low_stock'
-    });
+    try {
+      await queryInterface.addIndex('inventory', ['quantity', 'low_stock_threshold'], {
+        name: 'idx_inventory_low_stock'
+      });
+    } catch (error) {
+      // Index might already exist, continue
+      console.log('Index idx_inventory_low_stock already exists, skipping...');
+    }
 
-    await queryInterface.addIndex('inventory', ['expiry_date'], {
-      name: 'idx_inventory_expiry'
-    });
+    try {
+      await queryInterface.addIndex('inventory', ['expiry_date'], {
+        name: 'idx_inventory_expiry'
+      });
+    } catch (error) {
+      // Index might already exist, continue
+      console.log('Index idx_inventory_expiry already exists, skipping...');
+    }
   },
 
   async down (queryInterface, Sequelize) {
