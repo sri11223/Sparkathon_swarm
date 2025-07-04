@@ -215,6 +215,138 @@ const validatePagination = [
   handleValidationErrors
 ];
 
+// Notification validation rules
+const notificationValidation = {
+  sendNotification: [
+    body('title')
+      .trim()
+      .isLength({ min: 1, max: 255 })
+      .withMessage('Title is required and must not exceed 255 characters'),
+    body('body')
+      .trim()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage('Body is required and must not exceed 1000 characters'),
+    body('type')
+      .isIn(['order_status', 'new_delivery', 'payout_notification', 'promotional', 'system_alert', 'hub_inventory', 'emergency_alert', 'community_update'])
+      .withMessage('Invalid notification type'),
+    body('user_id')
+      .optional()
+      .isUUID()
+      .withMessage('Invalid user ID format'),
+    body('user_ids')
+      .optional()
+      .isArray()
+      .withMessage('user_ids must be an array'),
+    body('user_ids.*')
+      .optional()
+      .isUUID()
+      .withMessage('Each user ID must be a valid UUID'),
+    body('related_entity_id')
+      .optional()
+      .isString()
+      .withMessage('Related entity ID must be a string'),
+    body('data')
+      .optional()
+      .isObject()
+      .withMessage('Data must be an object'),
+    handleValidationErrors
+  ],
+
+  sendBulkNotification: [
+    body('title')
+      .trim()
+      .isLength({ min: 1, max: 255 })
+      .withMessage('Title is required and must not exceed 255 characters'),
+    body('body')
+      .trim()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage('Body is required and must not exceed 1000 characters'),
+    body('type')
+      .isIn(['order_status', 'new_delivery', 'payout_notification', 'promotional', 'system_alert', 'hub_inventory', 'emergency_alert', 'community_update'])
+      .withMessage('Invalid notification type'),
+    body('user_roles')
+      .optional()
+      .isArray()
+      .withMessage('user_roles must be an array'),
+    body('user_roles.*')
+      .optional()
+      .isIn(['customer', 'hub_owner', 'courier', 'admin'])
+      .withMessage('Invalid user role'),
+    body('hub_ids')
+      .optional()
+      .isArray()
+      .withMessage('hub_ids must be an array'),
+    body('hub_ids.*')
+      .optional()
+      .isUUID()
+      .withMessage('Each hub ID must be a valid UUID'),
+    body('data')
+      .optional()
+      .isObject()
+      .withMessage('Data must be an object'),
+    handleValidationErrors
+  ],
+
+  sendEmergencyNotification: [
+    body('title')
+      .trim()
+      .isLength({ min: 1, max: 255 })
+      .withMessage('Title is required and must not exceed 255 characters'),
+    body('body')
+      .trim()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage('Body is required and must not exceed 1000 characters'),
+    body('severity')
+      .isIn(['low', 'medium', 'high', 'critical'])
+      .withMessage('Severity must be low, medium, high, or critical'),
+    body('affected_areas')
+      .optional()
+      .isArray()
+      .withMessage('affected_areas must be an array'),
+    body('immediate_action')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Immediate action must not exceed 500 characters'),
+    handleValidationErrors
+  ],
+
+  updatePreferences: [
+    body('preferences')
+      .isObject()
+      .withMessage('Preferences must be an object'),
+    body('preferences.order_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('order_notifications must be a boolean'),
+    body('preferences.delivery_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('delivery_notifications must be a boolean'),
+    body('preferences.promotional_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('promotional_notifications must be a boolean'),
+    body('preferences.system_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('system_notifications must be a boolean'),
+    body('preferences.emergency_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('emergency_notifications must be a boolean'),
+    body('preferences.community_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('community_notifications must be a boolean'),
+    body('preferences.earnings_notifications')
+      .optional()
+      .isBoolean()
+      .withMessage('earnings_notifications must be a boolean'),
+    handleValidationErrors
+  ]
+};
+
 module.exports = {
   handleValidationErrors,
   validateRequest: handleValidationErrors, // Add alias for consistency
@@ -226,5 +358,6 @@ module.exports = {
   validateOrderCreation,
   validateInventoryUpdate,
   validateUUID,
-  validatePagination
+  validatePagination,
+  notificationValidation
 };

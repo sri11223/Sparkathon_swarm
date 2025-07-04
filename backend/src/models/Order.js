@@ -49,11 +49,31 @@ module.exports = (sequelize) => {
         key: 'hub_id'
       }
     },
+    courier_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'user_id'
+      }
+    },
+    delivery_address: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    delivery_latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: false
+    },
+    delivery_longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: false
+    },
     status: {
       type: DataTypes.STRING(30),
       allowNull: false,
       validate: {
-        isIn: [['pending', 'confirmed', 'ready_for_pickup', 'out_for_delivery', 'completed', 'cancelled']],
+        isIn: [['pending', 'confirmed', 'ready_for_pickup', 'picked_up', 'in_transit', 'delivered', 'cancelled', 'failed']],
       },
     },
     order_type: {
@@ -69,6 +89,18 @@ module.exports = (sequelize) => {
     },
     pickup_code: {
       type: DataTypes.STRING(10),
+    },
+    courier_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    estimated_delivery_time: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    cancellation_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
   }, {
     sequelize,

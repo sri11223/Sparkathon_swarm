@@ -21,6 +21,11 @@ const routeRoutes = require('./routes/routes');
 const aiRoutes = require('./routes/ai');
 const adminRoutes = require('./routes/admin');
 const pickupRoutes = require('./routes/pickup');
+const communityRoutes = require('./routes/community');
+const crisisRoutes = require('./routes/crisis');
+const mobileRoutes = require('./routes/mobile');
+const notificationRoutes = require('./routes/notifications');
+const realtimeRoutes = require('./routes/realtime');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -75,6 +80,11 @@ app.use('/api/routes', routeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pickup', pickupRoutes);
+app.use('/api/community', communityRoutes);
+app.use('/api/crisis', crisisRoutes);
+app.use('/api/mobile', mobileRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/realtime', realtimeRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

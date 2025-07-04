@@ -1,4 +1,4 @@
-const { Order, Hub, User, Product, Inventory } = require('../models');
+const { Order, Hub, User, Product, Inventory, SmartLoadOptimization, CourierVehicle } = require('../models');
 const logger = require('../utils/logger');
 const axios = require('axios');
 const { Op } = require('sequelize');
@@ -453,34 +453,538 @@ class AIController {
       });
     }
   }
+
+  // SmartLoad AI - Warehouse Layout Optimization
+  static async optimizeWarehouseLayout(req, res) {
+    try {
+      const { hub_id, warehouse_dimensions, product_categories, access_points } = req.body;
+      const requested_by = req.user.user_id;
+
+      // Verify hub ownership
+      const hub = await Hub.findOne({
+        where: { hub_id, owner_id: requested_by }
+      });
+
+      if (!hub) {
+        return res.status(403).json({
+          success: false,
+          message: 'Hub not found or access denied'
+        });
+      }
+
+      // Get current inventory for optimization
+      const inventory = await Inventory.findAll({
+        where: { hub_id },
+        include: [{
+          model: Product,
+          as: 'product'
+        }]
+      });
+
+      const inputParameters = {
+        warehouse_dimensions,
+        product_categories,
+        access_points,
+        current_inventory: inventory.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product.name,
+          category: item.product.category,
+          quantity: item.quantity,
+          dimensions: item.product.dimensions,
+          weight: item.product.weight,
+          turnover_rate: item.turnover_rate || 1
+        }))
+      };
+
+      // Create optimization request
+      const optimization = await SmartLoadOptimization.create({
+        optimization_type: 'warehouse_layout',
+        hub_id,
+        requested_by,
+        input_parameters: inputParameters,
+        status: 'processing'
+      });
+
+      // Simulate AI processing (replace with actual AI service)
+      setTimeout(async () => {
+        try {
+          const optimizationResults = await simulateWarehouseOptimization(inputParameters);
+          
+          await optimization.update({
+            status: 'completed',
+            optimization_results: optimizationResults,
+            efficiency_improvement: optimizationResults.efficiency_gain,
+            estimated_time_saved: optimizationResults.time_saved_minutes,
+            ai_confidence_score: optimizationResults.confidence
+          });
+
+          // Emit completion event
+          const socketManager = require('../services/socketManager');
+          socketManager.io.to(`hubowner:${requested_by}`).emit('optimization_complete', {
+            optimization_id: optimization.optimization_id,
+            type: 'warehouse_layout',
+            results: optimizationResults
+          });
+        } catch (error) {
+          await optimization.update({ status: 'failed' });
+          logger.error('Warehouse optimization processing error:', error);
+        }
+      }, 3000); // 3 second delay
+
+      res.status(202).json({
+        success: true,
+        message: 'Warehouse layout optimization started',
+        data: {
+          optimization_id: optimization.optimization_id,
+          estimated_completion: '2-3 minutes'
+        }
+      });
+    } catch (error) {
+      logger.error('Warehouse optimization error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start warehouse optimization',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // SmartLoad AI - 3D Truck Loading Optimization
+  static async optimizeTruckLoading(req, res) {
+    try {
+      const { vehicle_id, order_ids, loading_constraints } = req.body;
+      const requested_by = req.user.user_id;
+
+      // Verify vehicle ownership
+      const vehicle = await CourierVehicle.findOne({
+        where: { vehicle_id, courier_id: requested_by }
+      });
+
+      if (!vehicle) {
+        return res.status(403).json({
+          success: false,
+          message: 'Vehicle not found or access denied'
+        });
+      }
+
+      // Get order details with products
+      const orders = await Order.findAll({
+        where: { order_id: { [Op.in]: order_ids } },
+        include: [{
+          model: require('../models').OrderItem,
+          as: 'orderItems',
+          include: [{
+            model: Product,
+            as: 'product'
+          }]
+        }]
+      });
+
+      const inputParameters = {
+        vehicle_dimensions: {
+          length: vehicle.cargo_length,
+          width: vehicle.cargo_width,
+          height: vehicle.cargo_height,
+          max_weight: vehicle.max_weight
+        },
+        loading_constraints: loading_constraints || {},
+        orders: orders.map(order => ({
+          order_id: order.order_id,
+          priority: order.priority_level,
+          items: order.orderItems.map(item => ({
+            product_id: item.product_id,
+            name: item.product.name,
+            quantity: item.quantity,
+            dimensions: item.product.dimensions,
+            weight: item.product.weight,
+            fragile: item.product.is_fragile || false
+          }))
+        }))
+      };
+
+      const optimization = await SmartLoadOptimization.create({
+        optimization_type: 'truck_loading',
+        vehicle_id,
+        requested_by,
+        input_parameters: inputParameters,
+        status: 'processing'
+      });
+
+      // Simulate AI processing
+      setTimeout(async () => {
+        try {
+          const optimizationResults = await simulateTruckLoadingOptimization(inputParameters);
+          
+          await optimization.update({
+            status: 'completed',
+            optimization_results: optimizationResults,
+            space_utilization: optimizationResults.space_utilization,
+            weight_distribution: optimizationResults.weight_distribution,
+            loading_sequence: optimizationResults.loading_sequence,
+            efficiency_improvement: optimizationResults.efficiency_gain,
+            ai_confidence_score: optimizationResults.confidence
+          });
+
+          // Emit completion event
+          const socketManager = require('../services/socketManager');
+          socketManager.io.to(`courier:${requested_by}`).emit('optimization_complete', {
+            optimization_id: optimization.optimization_id,
+            type: 'truck_loading',
+            results: optimizationResults
+          });
+        } catch (error) {
+          await optimization.update({ status: 'failed' });
+          logger.error('Truck loading optimization processing error:', error);
+        }
+      }, 5000); // 5 second delay
+
+      res.status(202).json({
+        success: true,
+        message: 'Truck loading optimization started',
+        data: {
+          optimization_id: optimization.optimization_id,
+          estimated_completion: '3-5 minutes'
+        }
+      });
+    } catch (error) {
+      logger.error('Truck loading optimization error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start truck loading optimization',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // SmartLoad AI - Advanced Inventory Suggestions
+  static async getAdvancedInventorySuggestions(req, res) {
+    try {
+      const { hub_id } = req.params;
+      const { forecast_period = 30, optimization_goals } = req.query;
+
+      const hub = await Hub.findByPk(hub_id);
+      if (!hub) {
+        return res.status(404).json({
+          success: false,
+          message: 'Hub not found'
+        });
+      }
+
+      // Check permissions
+      if (hub.owner_id !== req.user.user_id && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      // Get historical data for AI analysis
+      const currentInventory = await Inventory.findAll({
+        where: { hub_id },
+        include: [{
+          model: Product,
+          as: 'product'
+        }]
+      });
+
+      // Get recent orders for demand analysis
+      const recentOrders = await Order.findAll({
+        where: {
+          hub_id,
+          created_at: { [Op.gte]: new Date(Date.now() - 30*24*60*60*1000) }
+        },
+        include: [{
+          model: require('../models').OrderItem,
+          as: 'orderItems',
+          include: [{ model: Product, as: 'product' }]
+        }]
+      });
+
+      const inputParameters = {
+        hub_id,
+        current_inventory: currentInventory,
+        recent_orders: recentOrders,
+        forecast_period,
+        optimization_goals: optimization_goals || ['minimize_stockouts', 'optimize_turnover']
+      };
+
+      const optimization = await SmartLoadOptimization.create({
+        optimization_type: 'inventory_placement',
+        hub_id,
+        requested_by: req.user.user_id,
+        input_parameters: inputParameters,
+        status: 'processing'
+      });
+
+      // Simulate AI processing
+      setTimeout(async () => {
+        try {
+          const suggestions = await simulateInventoryOptimization(inputParameters);
+          
+          await optimization.update({
+            status: 'completed',
+            optimization_results: suggestions,
+            efficiency_improvement: suggestions.efficiency_gain,
+            cost_savings: suggestions.cost_savings,
+            ai_confidence_score: suggestions.confidence
+          });
+        } catch (error) {
+          await optimization.update({ status: 'failed' });
+          logger.error('Inventory optimization processing error:', error);
+        }
+      }, 2000);
+
+      res.status(202).json({
+        success: true,
+        message: 'Advanced inventory analysis started',
+        data: {
+          optimization_id: optimization.optimization_id,
+          estimated_completion: '1-2 minutes'
+        }
+      });
+    } catch (error) {
+      logger.error('Advanced inventory suggestions error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate inventory suggestions',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // Get optimization results
+  static async getOptimizationResults(req, res) {
+    try {
+      const { optimization_id } = req.params;
+
+      const optimization = await SmartLoadOptimization.findByPk(optimization_id, {
+        include: [
+          { model: User, as: 'requester', attributes: ['user_id', 'first_name', 'last_name'] },
+          { model: Hub, as: 'hub', attributes: ['hub_id', 'name'] },
+          { model: CourierVehicle, as: 'vehicle', attributes: ['vehicle_id', 'make', 'model'] }
+        ]
+      });
+
+      if (!optimization) {
+        return res.status(404).json({
+          success: false,
+          message: 'Optimization not found'
+        });
+      }
+
+      // Check permissions
+      if (optimization.requested_by !== req.user.user_id && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Optimization results retrieved successfully',
+        data: optimization
+      });
+    } catch (error) {
+      logger.error('Get optimization results error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve optimization results',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // SmartLoad AI - Crisis Demand Forecasting
+  static async crisisDemandForecast(req, res) {
+    try {
+      const { crisis_event_id, affected_areas, forecast_period = 7 } = req.body;
+
+      const { CrisisEvent } = require('../models');
+      const crisisEvent = await CrisisEvent.findByPk(crisis_event_id);
+
+      if (!crisisEvent) {
+        return res.status(404).json({
+          success: false,
+          message: 'Crisis event not found'
+        });
+      }
+
+      // Get hubs in affected areas
+      const affectedHubs = await Hub.findAll({
+        where: {
+          // Simulate area filtering - in real implementation, use geospatial queries
+          status: 'active'
+        },
+        include: [{
+          model: Inventory,
+          as: 'inventory',
+          include: [{ model: Product, as: 'product' }]
+        }]
+      });
+
+      const inputParameters = {
+        crisis_event: crisisEvent,
+        affected_areas,
+        affected_hubs: affectedHubs,
+        forecast_period,
+        emergency_supplies_priority: crisisEvent.emergency_supplies_needed
+      };
+
+      const optimization = await SmartLoadOptimization.create({
+        optimization_type: 'crisis_demand_forecast',
+        requested_by: req.user.user_id,
+        input_parameters: inputParameters,
+        status: 'processing'
+      });
+
+      // Simulate AI processing
+      setTimeout(async () => {
+        try {
+          const forecast = await simulateCrisisDemandForecast(inputParameters);
+          
+          await optimization.update({
+            status: 'completed',
+            optimization_results: forecast,
+            ai_confidence_score: forecast.confidence
+          });
+        } catch (error) {
+          await optimization.update({ status: 'failed' });
+          logger.error('Crisis demand forecast processing error:', error);
+        }
+      }, 4000);
+
+      res.status(202).json({
+        success: true,
+        message: 'Crisis demand forecast initiated',
+        data: {
+          optimization_id: optimization.optimization_id,
+          estimated_completion: '3-4 minutes'
+        }
+      });
+    } catch (error) {
+      logger.error('Crisis demand forecast error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to initiate crisis demand forecast',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
 }
 
-// Helper functions
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the Earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const d = R * c; // Distance in km
-  return Math.round(d * 100) / 100;
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI/180);
-}
-
-function getVehicleSuitability(vehicleType, orderValue) {
-  const suitabilityMatrix = {
-    'bike': orderValue < 100 ? 1 : 0.6,
-    'car': orderValue < 500 ? 1 : 0.8,
-    'van': orderValue < 1000 ? 1 : 0.9,
-    'truck': 1
+// Simulation functions for AI optimization (replace with actual AI service calls)
+async function simulateWarehouseOptimization(inputParameters) {
+  // Simulate AI processing delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  return {
+    layout_suggestions: [
+      {
+        zone: 'fast_moving_items',
+        location: 'near_entrance',
+        products: inputParameters.current_inventory.filter(item => item.turnover_rate > 5).map(item => item.product_id)
+      },
+      {
+        zone: 'bulk_storage',
+        location: 'back_area',
+        products: inputParameters.current_inventory.filter(item => item.quantity > 100).map(item => item.product_id)
+      }
+    ],
+    picking_routes: [
+      { route_id: 1, sequence: ['A1', 'A2', 'B1', 'B2'], estimated_time: 12 },
+      { route_id: 2, sequence: ['C1', 'C2', 'D1', 'D2'], estimated_time: 15 }
+    ],
+    efficiency_gain: 23.5, // percentage
+    time_saved_minutes: 45,
+    confidence: 0.87
   };
-  return suitabilityMatrix[vehicleType] || 0.5;
+}
+
+async function simulateTruckLoadingOptimization(inputParameters) {
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  return {
+    loading_sequence: [
+      { step: 1, items: ['order_1_item_1', 'order_1_item_2'], position: 'rear_left' },
+      { step: 2, items: ['order_2_item_1'], position: 'rear_right' },
+      { step: 3, items: ['order_3_item_1', 'order_3_item_2'], position: 'front_center' }
+    ],
+    space_utilization: 89.3, // percentage
+    weight_distribution: {
+      front_axle: 2100, // kg
+      rear_axle: 3400, // kg
+      balance_score: 0.92
+    },
+    delivery_sequence: inputParameters.orders.map((order, index) => ({
+      order_id: order.order_id,
+      sequence: index + 1,
+      estimated_unload_time: 5 + Math.floor(Math.random() * 10)
+    })),
+    efficiency_gain: 18.7,
+    confidence: 0.91
+  };
+}
+
+async function simulateInventoryOptimization(inputParameters) {
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  return {
+    reorder_suggestions: inputParameters.current_inventory.map(item => ({
+      product_id: item.product_id,
+      current_stock: item.quantity,
+      suggested_reorder_point: Math.max(10, Math.floor(item.quantity * 0.3)),
+      suggested_order_quantity: Math.floor(item.quantity * 0.5),
+      priority: item.turnover_rate > 3 ? 'high' : 'medium'
+    })),
+    placement_optimization: [
+      { product_id: 'fast_movers', suggested_location: 'zone_A', reason: 'high_turnover' },
+      { product_id: 'seasonal_items', suggested_location: 'zone_C', reason: 'periodic_demand' }
+    ],
+    stockout_predictions: [
+      { product_id: 'product_1', predicted_stockout_date: new Date(Date.now() + 7*24*60*60*1000) },
+      { product_id: 'product_2', predicted_stockout_date: new Date(Date.now() + 14*24*60*60*1000) }
+    ],
+    efficiency_gain: 15.2,
+    cost_savings: 1250.75,
+    confidence: 0.83
+  };
+}
+
+async function simulateCrisisDemandForecast(inputParameters) {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  const emergencyItems = ['water', 'canned_food', 'medical_supplies', 'blankets', 'batteries'];
+  
+  return {
+    demand_forecast: emergencyItems.map(item => ({
+      item: item,
+      current_demand_multiplier: 3.5 + Math.random() * 2,
+      projected_demand_7_days: Math.floor(1000 + Math.random() * 2000),
+      priority_level: Math.floor(1 + Math.random() * 5),
+      supply_gap: Math.floor(Math.random() * 500)
+    })),
+    supply_recommendations: [
+      { item: 'water', recommended_additional_stock: 2000, urgency: 'critical' },
+      { item: 'medical_supplies', recommended_additional_stock: 500, urgency: 'high' }
+    ],
+    distribution_strategy: {
+      priority_hubs: inputParameters.affected_hubs.slice(0, 3).map(hub => hub.hub_id),
+      emergency_supply_routes: ['route_1', 'route_2', 'route_3']
+    },
+    confidence: 0.79
+  };
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of Earth in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
 
 module.exports = AIController;

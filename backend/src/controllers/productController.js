@@ -143,7 +143,7 @@ class ProductController {
               {
                 model: Hub,
                 as: 'hub',
-                attributes: ['id', 'name', 'address', 'latitude', 'longitude']
+                attributes: ['hub_id', 'name', 'address', 'location']
               }
             ]
           }

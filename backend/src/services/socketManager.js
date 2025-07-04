@@ -191,6 +191,105 @@ class SocketManager {
         }
       });
 
+      // Community events
+      socket.on('join_community_hub', (hubId) => {
+        socket.join(`community_hub:${hubId}`);
+        logger.info(`👥 User ${socket.userId} joined community hub ${hubId}`);
+      });
+
+      socket.on('leave_community_hub', (hubId) => {
+        socket.leave(`community_hub:${hubId}`);
+        logger.info(`👋 User ${socket.userId} left community hub ${hubId}`);
+      });
+
+      socket.on('community_activity', (data) => {
+        const { hubId, activityType, activityData } = data;
+        
+        // Broadcast to community hub members
+        this.io.to(`community_hub:${hubId}`).emit('community_update', {
+          userId: socket.userId,
+          userType: socket.userType,
+          activityType,
+          activityData,
+          timestamp: new Date().toISOString()
+        });
+        
+        logger.info(`🏘️ Community activity in hub ${hubId}: ${activityType}`);
+      });
+
+      // Crisis management events
+      socket.on('join_crisis_response', (crisisId) => {
+        socket.join(`crisis:${crisisId}`);
+        logger.info(`🚨 User ${socket.userId} joined crisis response ${crisisId}`);
+      });
+
+      socket.on('crisis_volunteer_update', (data) => {
+        const { crisisId, volunteerId, status, location } = data;
+        
+        // Broadcast to crisis response team
+        this.io.to(`crisis:${crisisId}`).emit('volunteer_status_update', {
+          volunteerId,
+          status,
+          location,
+          timestamp: new Date().toISOString()
+        });
+        
+        logger.info(`👨‍🚒 Volunteer ${volunteerId} status update in crisis ${crisisId}: ${status}`);
+      });
+
+      socket.on('emergency_resource_request', (data) => {
+        const { crisisId, resourceType, quantity, urgency, location } = data;
+        
+        // Broadcast to all emergency responders and hub owners
+        this.io.to(`crisis:${crisisId}`)
+               .to('hubowners')
+               .to('admin')
+               .emit('resource_request', {
+                 requesterId: socket.userId,
+                 resourceType,
+                 quantity,
+                 urgency,
+                 location,
+                 timestamp: new Date().toISOString()
+               });
+        
+        logger.warn(`🆘 Emergency resource request: ${resourceType} x${quantity} (${urgency})`);
+      });
+
+      // Earnings and leaderboard events
+      socket.on('subscribe_leaderboard', (leaderboardType) => {
+        socket.join(`leaderboard:${leaderboardType}`);
+        logger.info(`🏆 User ${socket.userId} subscribed to ${leaderboardType} leaderboard`);
+      });
+
+      // Mobile app specific events
+      socket.on('location_permission_update', (data) => {
+        const { hasPermission, accuracy } = data;
+        
+        if (socket.userType === 'courier' && hasPermission) {
+          // Enable location tracking for courier
+          socket.emit('location_tracking_enabled', {
+            accuracy,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        logger.info(`📍 Location permission updated for ${socket.userId}: ${hasPermission}`);
+      });
+
+      socket.on('app_state_change', (data) => {
+        const { state } = data; // foreground, background, inactive
+        
+        // Update user's online status based on app state
+        if (state === 'background' || state === 'inactive') {
+          socket.emit('status_update', { online: false });
+        } else {
+          socket.emit('status_update', { online: true });
+        }
+        
+        logger.info(`📱 App state changed for ${socket.userId}: ${state}`);
+      });
+
       // Disconnect handling
       socket.on('disconnect', () => {
         // Remove from tracking maps
@@ -219,6 +318,28 @@ class SocketManager {
   }
 
   // Helper methods for broadcasting from other parts of the application
+
+  // Send notification to specific user
+  sendNotificationToUser(userId, notification) {
+    // Send to user-specific room
+    this.io.to(`customer:${userId}`).emit('notification', {
+      ...notification,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Also try other user types in case the user is logged in as different role
+    this.io.to(`courier:${userId}`).emit('notification', {
+      ...notification,
+      timestamp: new Date().toISOString()
+    });
+    
+    this.io.to(`hubowner:${userId}`).emit('notification', {
+      ...notification,
+      timestamp: new Date().toISOString()
+    });
+
+    logger.info(`📲 Notification sent to user ${userId}: ${notification.title}`);
+  }
 
   // Notify customer about order status change
   notifyOrderUpdate(customerId, orderData) {
@@ -253,6 +374,70 @@ class SocketManager {
     });
   }
 
+  // Community hub notifications
+  notifyCommunityHubActivity(hubId, activity) {
+    this.io.to(`community_hub:${hubId}`).emit('community_update', {
+      ...activity,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Crisis response notifications
+  broadcastCrisisUpdate(crisisId, update) {
+    this.io.to(`crisis:${crisisId}`).emit('crisis_update', {
+      ...update,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Emergency resource notifications
+  notifyEmergencyResourceUpdate(resourceUpdate) {
+    this.io.to('hubowners')
+           .to('admin')
+           .emit('emergency_resource_update', {
+             ...resourceUpdate,
+             timestamp: new Date().toISOString()
+           });
+  }
+
+  // Leaderboard updates
+  broadcastLeaderboardUpdate(leaderboardType, rankings) {
+    this.io.to(`leaderboard:${leaderboardType}`).emit('leaderboard_update', {
+      leaderboardType,
+      rankings,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Earnings notifications
+  notifyEarningsUpdate(userId, earningsData) {
+    this.io.to(`customer:${userId}`)
+           .to(`courier:${userId}`)
+           .to(`hubowner:${userId}`)
+           .emit('earnings_update', {
+             ...earningsData,
+             timestamp: new Date().toISOString()
+           });
+  }
+
+  // Challenge notifications
+  broadcastChallengeUpdate(challengeData) {
+    this.io.emit('challenge_update', {
+      ...challengeData,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Safety report notifications
+  notifySafetyReportUpdate(reportData) {
+    this.io.to('admin')
+           .to('hubowners')
+           .emit('safety_report_update', {
+             ...reportData,
+             timestamp: new Date().toISOString()
+           });
+  }
+
   // Get connection statistics
   getConnectionStats() {
     return {
@@ -261,6 +446,14 @@ class SocketManager {
       couriers: this.connectedCouriers.size,
       hubOwners: this.connectedHubOwners.size
     };
+  }
+
+  // Get user's socket ID
+  getUserSocketId(userId) {
+    return this.connectedUsers.get(userId) || 
+           this.connectedCouriers.get(userId) || 
+           this.connectedHubOwners.get(userId) || 
+           null;
   }
 }
 

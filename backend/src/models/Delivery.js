@@ -43,6 +43,14 @@ module.exports = (sequelize) => {
         key: 'user_id'
       }
     },
+    vehicle_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'courier_vehicles',
+        key: 'vehicle_id'
+      }
+    },
     status: {
       type: DataTypes.STRING(20),
       allowNull: false,
@@ -61,6 +69,13 @@ module.exports = (sequelize) => {
     },
     delivered_at: {
       type: DataTypes.DATE,
+    },
+    current_location: {
+      type: DataTypes.GEOGRAPHY('POINT', 4326),
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     earnings: {
       type: DataTypes.DECIMAL(10, 2),

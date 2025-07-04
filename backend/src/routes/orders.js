@@ -27,7 +27,7 @@ router.get('/:id', authenticate, validateUUID('id'), OrderController.getOrderByI
 // @desc    Update order status
 // @route   PUT /api/orders/:id/status
 // @access  Private (Courier, Hub Owner, Admin)
-router.put('/:id/status', authenticate, authorize('courier', 'hubowner', 'admin'), validateUUID('id'), [
+router.put('/:id/status', authenticate, authorize('courier', 'hub_owner', 'admin'), validateUUID('id'), [
   body('status')
     .isIn(['pending', 'confirmed', 'ready_for_pickup', 'picked_up', 'in_transit', 'delivered', 'cancelled', 'failed'])
     .withMessage('Invalid order status'),
@@ -38,7 +38,7 @@ router.put('/:id/status', authenticate, authorize('courier', 'hubowner', 'admin'
 // @desc    Assign courier to order
 // @route   PUT /api/orders/:id/assign-courier
 // @access  Private (Hub Owner, Admin)
-router.put('/:id/assign-courier', authenticate, authorize('hubowner', 'admin'), validateUUID('id'), [
+router.put('/:id/assign-courier', authenticate, authorize('hub_owner', 'admin'), validateUUID('id'), [
   body('courier_id').isUUID().withMessage('Valid courier ID required')
 ], OrderController.assignCourier);
 

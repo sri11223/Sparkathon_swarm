@@ -31,6 +31,8 @@ const seedDatabase = async () => {
 
     console.log('🌪️ Wiping all existing data...');
     const tables = [
+      'community_leaderboards', 'safety_reports', 'community_earnings', 'smart_load_optimizations', 
+      'push_notification_tokens', 'community_challenges', 'emergency_hubs', 'crisis_events', 'community_hubs',
       'analytics_events', 'user_ratings', 'ai_optimization_logs', 'order_vouchers', 
       'vouchers', 'system_logs', 'notifications', 'stockout_events', 
       'demand_predictions', 'demand_signals', 'deliveries', 'order_items', 
@@ -193,8 +195,11 @@ const seedDatabase = async () => {
         const stockoutQuantity = popularProduct.quantity;
         
         const stockoutOrderRes = await client.query(
-            `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price, created_at, updated_at) VALUES ($1, $2, $3, 'completed', 'drive_thru_pickup', $4, NOW(), NOW()) RETURNING *`,
-            [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, (stockoutQuantity * parseFloat(popularProduct.price)).toFixed(2)]
+            `INSERT INTO orders (order_id, customer_id, hub_id, delivery_address, delivery_latitude, delivery_longitude, status, order_type, total_price, created_at, updated_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, 'completed', 'drive_thru_pickup', $7, NOW(), NOW()) RETURNING *`,
+            [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, 
+             faker.location.streetAddress(true), faker.location.latitude(), faker.location.longitude(),
+             (stockoutQuantity * parseFloat(popularProduct.price)).toFixed(2)]
         );
         const stockoutOrder = stockoutOrderRes.rows[0];
 
@@ -221,9 +226,14 @@ const seedDatabase = async () => {
       if (inventoryRes.rows.length === 0) continue;
       
       const customer = getRandom(customers);
+      const deliveryAddress = faker.location.streetAddress(true);
+      const deliveryLat = faker.location.latitude();
+      const deliveryLng = faker.location.longitude();
+      
       const orderRes = await client.query(
-        `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price, created_at, updated_at) VALUES ($1, $2, $3, 'completed', 'delivery', 100.0, NOW(), NOW()) RETURNING *`,
-        [faker.string.uuid(), customer.user_id, hub.hub_id]
+        `INSERT INTO orders (order_id, customer_id, hub_id, delivery_address, delivery_latitude, delivery_longitude, status, order_type, total_price, created_at, updated_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, 'completed', 'delivery', 100.0, NOW(), NOW()) RETURNING *`,
+        [faker.string.uuid(), customer.user_id, hub.hub_id, deliveryAddress, deliveryLat, deliveryLng]
       );
       const order = orderRes.rows[0];
 
@@ -246,6 +256,338 @@ const seedDatabase = async () => {
         }
     }
     console.log('✅ AI optimization logs created.');
+
+    // --- COMMUNITY HUBS ---
+    console.log('🌱 Creating community hubs...');
+    let createdCommunityHubs = [];
+    for (let i = 0; i < 3; i++) {
+      const hubOwner = getRandom(hubOwners);
+      const communityHubRes = await client.query(
+        `INSERT INTO community_hubs (
+          hub_id, name, description, category, location, operating_hours, 
+          contact_info, amenities, community_features, safety_rating, 
+          hub_owner_id, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()) RETURNING *`,
+        [
+          faker.string.uuid(),
+          `${faker.company.name()} Community Hub`,
+          `A vibrant community space offering ${faker.commerce.department()} services and local marketplace`,
+          getRandom(['local_marketplace', 'emergency_center', 'social_hub', 'skill_sharing']),
+          JSON.stringify({
+            latitude: faker.location.latitude(),
+            longitude: faker.location.longitude(),
+            address: faker.location.streetAddress(true),
+            city: faker.location.city(),
+            state: faker.location.state(),
+            zip: faker.location.zipCode()
+          }),
+          JSON.stringify({
+            monday: { open: '08:00', close: '20:00' },
+            tuesday: { open: '08:00', close: '20:00' },
+            wednesday: { open: '08:00', close: '20:00' },
+            thursday: { open: '08:00', close: '20:00' },
+            friday: { open: '08:00', close: '22:00' },
+            saturday: { open: '09:00', close: '22:00' },
+            sunday: { open: '10:00', close: '18:00' }
+          }),
+          JSON.stringify({
+            phone: faker.phone.number(),
+            email: faker.internet.email(),
+            website: faker.internet.url()
+          }),
+          JSON.stringify(['wifi', 'parking', 'restrooms', 'wheelchair_accessible', 'food_court']),
+          JSON.stringify({
+            community_board: true,
+            event_space: true,
+            local_vendor_spots: true,
+            skill_sharing_area: true
+          }),
+          faker.number.float({ min: 3.5, max: 5.0, precision: 0.1 }),
+          hubOwner.user_id,
+          'active'
+        ]
+      );
+      createdCommunityHubs.push(communityHubRes.rows[0]);
+    }
+    console.log(`✅ ${createdCommunityHubs.length} community hubs created.`);
+
+    // --- CRISIS EVENTS ---
+    console.log('🌱 Creating crisis events...');
+    const crisisEventRes = await client.query(
+      `INSERT INTO crisis_events (
+        crisis_id, title, description, crisis_type, severity_level, 
+        affected_areas, emergency_contacts, resource_needs, response_plan, 
+        status, activation_time, estimated_duration, created_by, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()) RETURNING *`,
+      [
+        faker.string.uuid(),
+        'Simulated Supply Chain Disruption',
+        'A simulated crisis event to test emergency response capabilities and resource coordination',
+        'supply_shortage',
+        'medium',
+        JSON.stringify([
+          { area: faker.location.city(), severity: 'high' },
+          { area: faker.location.city(), severity: 'medium' }
+        ]),
+        JSON.stringify({
+          emergency_coordinator: faker.phone.number(),
+          local_authorities: faker.phone.number(),
+          red_cross: '1-800-RED-CROSS'
+        }),
+        JSON.stringify(['food_supplies', 'medical_supplies', 'transportation', 'volunteers']),
+        'Coordinate with local hubs to distribute emergency supplies and maintain communication channels',
+        'active',
+        new Date(),
+        24, // 24 hours
+        adminUser.user_id
+      ]
+    );
+    const crisisEvent = crisisEventRes.rows[0];
+
+    // --- EMERGENCY HUBS ---
+    console.log('🌱 Creating emergency hubs...');
+    const emergencyHubRes = await client.query(
+      `INSERT INTO emergency_hubs (
+        emergency_hub_id, crisis_id, hub_id, emergency_role, capacity, 
+        available_resources, volunteer_count, status, contact_person, 
+        activation_time, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()) RETURNING *`,
+      [
+        faker.string.uuid(),
+        crisisEvent.crisis_id,
+        activeHubs[0].hub_id,
+        'supply_center',
+        JSON.stringify({
+          people: 100,
+          vehicles: 10,
+          storage_m3: 200
+        }),
+        JSON.stringify(['emergency_food', 'water', 'medical_kits', 'blankets']),
+        5,
+        'operational',
+        activeHubs[0].owner_id,
+        new Date()
+      ]
+    );
+    console.log('✅ Emergency hub created for crisis response.');
+
+    // --- COMMUNITY CHALLENGES ---
+    console.log('🌱 Creating community challenges...');
+    for (let i = 0; i < 2; i++) {
+      await client.query(
+        `INSERT INTO community_challenges (
+          challenge_id, title, description, challenge_type, reward_points, 
+          monetary_reward, requirements, start_date, end_date, 
+          participant_count, max_participants, status, created_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())`,
+        [
+          faker.string.uuid(),
+          `${getRandom(['Eco-Friendly', 'Speed', 'Community Service', 'Innovation'])} Challenge`,
+          `Join our community challenge to ${faker.lorem.sentence()}`,
+          getRandom(['delivery_efficiency', 'sustainability', 'community_service', 'innovation']),
+          faker.number.int({ min: 100, max: 500 }),
+          faker.number.float({ min: 50, max: 200, precision: 0.01 }),
+          JSON.stringify({
+            min_deliveries: faker.number.int({ min: 5, max: 20 }),
+            time_period: '7_days',
+            criteria: 'Complete deliveries with high customer satisfaction'
+          }),
+          faker.date.recent({ days: 1 }),
+          faker.date.future({ days: 7 }),
+          0,
+          faker.number.int({ min: 50, max: 200 }),
+          'active',
+          adminUser.user_id
+        ]
+      );
+    }
+    console.log('✅ Community challenges created.');
+
+    // --- PUSH NOTIFICATION TOKENS ---
+    console.log('🌱 Creating push notification tokens...');
+    for (const user of createdUsers.slice(0, 20)) { // First 20 users have mobile apps
+      await client.query(
+        `INSERT INTO push_notification_tokens (
+          token_id, user_id, device_token, device_type, device_info, 
+          app_version, os_version, is_active, notification_preferences, 
+          last_used, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
+        [
+          faker.string.uuid(),
+          user.user_id,
+          `${getRandom(['expo', 'fcm', 'apns'])}_${faker.string.alphanumeric(32)}`,
+          getRandom(['ios', 'android']),
+          JSON.stringify({
+            device_name: faker.helpers.arrayElement(['iPhone 15', 'Samsung Galaxy S24', 'Google Pixel 8']),
+            device_model: faker.helpers.arrayElement(['iPhone15,2', 'SM-S921B', 'GP8']),
+            manufacturer: faker.helpers.arrayElement(['Apple', 'Samsung', 'Google'])
+          }),
+          '1.0.0',
+          faker.helpers.arrayElement(['iOS 17.1', 'Android 14', 'iOS 16.5']),
+          true,
+          JSON.stringify({
+            order_notifications: true,
+            delivery_notifications: true,
+            promotional_notifications: faker.datatype.boolean(),
+            system_notifications: true,
+            emergency_notifications: true,
+            community_notifications: faker.datatype.boolean(),
+            earnings_notifications: true
+          }),
+          faker.date.recent({ days: 7 })
+        ]
+      );
+    }
+    console.log('✅ Push notification tokens created for mobile users.');
+
+    // --- SMART LOAD OPTIMIZATIONS ---
+    console.log('🌱 Creating smart load optimizations...');
+    for (const hub of activeHubs.slice(0, 3)) {
+      await client.query(
+        `INSERT INTO smart_load_optimizations (
+          optimization_id, hub_id, optimization_type, input_data, 
+          optimization_results, efficiency_metrics, implementation_status, 
+          estimated_savings, requested_by, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+        [
+          faker.string.uuid(),
+          hub.hub_id,
+          getRandom(['warehouse_layout', 'truck_loading', 'inventory_placement', 'demand_forecast']),
+          JSON.stringify({
+            warehouse_dimensions: { length: 50, width: 30, height: 6 },
+            current_layout: 'traditional',
+            inventory_volume: 150,
+            daily_orders: 100
+          }),
+          JSON.stringify({
+            recommended_layout: 'zone_based',
+            space_utilization: 85,
+            picking_efficiency: 92,
+            estimated_time_savings: 45
+          }),
+          JSON.stringify({
+            space_efficiency: '85%',
+            time_reduction: '45min/day',
+            cost_savings: '$200/month'
+          }),
+          getRandom(['completed', 'in_progress', 'pending']),
+          JSON.stringify({
+            monthly_cost_savings: faker.number.float({ min: 100, max: 500, precision: 0.01 }),
+            time_savings_hours: faker.number.float({ min: 10, max: 50, precision: 0.1 }),
+            efficiency_gain_percent: faker.number.float({ min: 5, max: 25, precision: 0.1 })
+          }),
+          hub.owner_id
+        ]
+      );
+    }
+    console.log('✅ Smart load optimizations created.');
+
+    // --- COMMUNITY EARNINGS ---
+    console.log('🌱 Creating community earnings...');
+    for (const courier of couriers.slice(0, 5)) {
+      for (let i = 0; i < 3; i++) {
+        await client.query(
+          `INSERT INTO community_earnings (
+            earning_id, user_id, earning_type, amount, points_earned, 
+            source_id, description, payout_status, payout_date, 
+            payment_method, metadata, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
+          [
+            faker.string.uuid(),
+            courier.user_id,
+            getRandom(['delivery_fee', 'bonus', 'challenge_reward', 'referral_bonus']),
+            faker.number.float({ min: 15, max: 150, precision: 0.01 }),
+            faker.number.int({ min: 10, max: 100 }),
+            faker.string.uuid(), // reference to order or challenge
+            `Earning from ${getRandom(['express delivery', 'weekend bonus', 'challenge completion', 'referral program'])}`,
+            getRandom(['completed', 'pending', 'processing']),
+            faker.date.recent({ days: 30 }),
+            JSON.stringify({
+              method: 'bank_transfer',
+              account_last4: faker.finance.accountNumber(4)
+            }),
+            JSON.stringify({
+              bonus_multiplier: faker.number.float({ min: 1.0, max: 2.0, precision: 0.1 }),
+              performance_rating: faker.number.float({ min: 4.0, max: 5.0, precision: 0.1 })
+            })
+          ]
+        );
+      }
+    }
+    console.log('✅ Community earnings created.');
+
+    // --- SAFETY REPORTS ---
+    console.log('🌱 Creating safety reports...');
+    for (let i = 0; i < 3; i++) {
+      await client.query(
+        `INSERT INTO safety_reports (
+          report_id, reporter_id, incident_type, severity, location, 
+          description, evidence, involved_parties, witness_info, 
+          status, assigned_to, resolution_notes, resolved_at, 
+          is_anonymous, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())`,
+        [
+          faker.string.uuid(),
+          getRandom(createdUsers).user_id,
+          getRandom(['accident', 'unsafe_conditions', 'theft', 'other']),
+          getRandom(['low', 'medium', 'high']),
+          JSON.stringify({
+            latitude: faker.location.latitude(),
+            longitude: faker.location.longitude(),
+            address: faker.location.streetAddress(true),
+            landmark: faker.company.name()
+          }),
+          `Safety incident reported: ${faker.lorem.paragraph()}`,
+          JSON.stringify([]),
+          JSON.stringify([]),
+          JSON.stringify({}),
+          getRandom(['reported', 'under_review', 'resolved']),
+          adminUser.user_id,
+          i === 0 ? 'Issue resolved through improved signage and lighting' : null,
+          i === 0 ? faker.date.recent({ days: 5 }) : null,
+          faker.datatype.boolean()
+        ]
+      );
+    }
+    console.log('✅ Safety reports created.');
+
+    // --- COMMUNITY LEADERBOARDS ---
+    console.log('🌱 Creating community leaderboards...');
+    const currentWeek = new Date().toISOString().slice(0, 4) + '-W' + String(Math.ceil((new Date().getDate()) / 7)).padStart(2, '0');
+    for (let i = 0; i < couriers.length; i++) {
+      const courier = couriers[i];
+      await client.query(
+        `INSERT INTO community_leaderboards (
+          leaderboard_id, user_id, leaderboard_type, period, rank, 
+          score, metrics, achievements, rewards_earned, is_current, 
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
+        [
+          faker.string.uuid(),
+          courier.user_id,
+          'weekly_deliveries',
+          currentWeek,
+          i + 1,
+          faker.number.float({ min: 50, max: 500, precision: 0.1 }),
+          JSON.stringify({
+            total_deliveries: faker.number.int({ min: 10, max: 50 }),
+            avg_rating: faker.number.float({ min: 4.0, max: 5.0, precision: 0.1 }),
+            on_time_percentage: faker.number.float({ min: 85, max: 100, precision: 0.1 }),
+            distance_traveled: faker.number.float({ min: 100, max: 500, precision: 0.1 })
+          }),
+          JSON.stringify([
+            { name: 'Speed Demon', description: 'Delivered 10+ orders in a day' },
+            { name: 'Customer Favorite', description: 'Maintained 4.8+ rating' }
+          ]),
+          JSON.stringify([
+            { reward: 'bonus_points', amount: 50 },
+            { reward: 'badge', type: 'weekly_champion' }
+          ]),
+          true
+        ]
+      );
+    }
+    console.log('✅ Community leaderboards created.');
 
     await client.query('COMMIT');
     console.log('🎉 Comprehensive database seeding with edge cases completed successfully!');
