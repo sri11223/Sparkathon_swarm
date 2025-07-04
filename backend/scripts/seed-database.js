@@ -34,7 +34,7 @@ const seedDatabase = async () => {
       'analytics_events', 'user_ratings', 'ai_optimization_logs', 'order_vouchers', 
       'vouchers', 'system_logs', 'notifications', 'stockout_events', 
       'demand_predictions', 'demand_signals', 'deliveries', 'order_items', 
-      'orders', 'hub_inventory', 'products', 'courier_vehicles', 'hubs', 'users'
+      'orders', 'inventory', 'products', 'courier_vehicles', 'hubs', 'users'
     ];
     await client.query(`TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`);
     console.log('✅ All tables wiped clean.');
@@ -162,9 +162,11 @@ const seedDatabase = async () => {
         const productsInHub = faker.helpers.shuffle(createdProducts).slice(0, faker.number.int({ min: PRODUCT_COUNT * 0.5, max: PRODUCT_COUNT * 0.9 }));
         for (const product of productsInHub) {
             const quantity = faker.number.int({ min: 10, max: 150 });
+            const price = faker.commerce.price({ min: 1, max: 200 });
             await client.query(
-                `INSERT INTO hub_inventory (hub_id, product_id, quantity, available_quantity) VALUES ($1, $2, $3, $4)`,
-                [hub.hub_id, product.product_id, quantity, quantity]
+                `INSERT INTO inventory (inventory_id, hub_id, product_id, quantity, reserved_quantity, price, low_stock_threshold, is_available, created_at, updated_at) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
+                [faker.string.uuid(), hub.hub_id, product.product_id, quantity, 0, price, faker.number.int({ min: 5, max: 15 }), true]
             );
         }
     }
@@ -173,23 +175,23 @@ const seedDatabase = async () => {
     // --- STOCKOUT SIMULATION ---
     console.log('🌱 Simulating a product stockout...');
     const busyHub = activeHubs[0];
-    const popularProductRes = await client.query('SELECT * FROM hub_inventory WHERE hub_id = $1 LIMIT 1', [busyHub.hub_id]);
+    const popularProductRes = await client.query('SELECT * FROM inventory WHERE hub_id = $1 LIMIT 1', [busyHub.hub_id]);
     if (popularProductRes.rows.length > 0) {
         const popularProduct = popularProductRes.rows[0];
-        const stockoutQuantity = popularProduct.available_quantity;
+        const stockoutQuantity = popularProduct.quantity;
         
         const stockoutOrderRes = await client.query(
             `INSERT INTO orders (order_id, customer_id, hub_id, status, order_type, total_price, created_at, updated_at) VALUES ($1, $2, $3, 'completed', 'drive_thru_pickup', $4, NOW(), NOW()) RETURNING *`,
-            [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, (stockoutQuantity * parseFloat(createdProducts.find(p => p.product_id === popularProduct.product_id).price)).toFixed(2)]
+            [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, (stockoutQuantity * parseFloat(popularProduct.price)).toFixed(2)]
         );
         const stockoutOrder = stockoutOrderRes.rows[0];
 
         await client.query(
             `INSERT INTO order_items (order_id, product_id, quantity, price_per_unit) VALUES ($1, $2, $3, $4)`,
-            [stockoutOrder.order_id, popularProduct.product_id, stockoutQuantity, createdProducts.find(p => p.product_id === popularProduct.product_id).price]
+            [stockoutOrder.order_id, popularProduct.product_id, stockoutQuantity, popularProduct.price]
         );
         await client.query(
-            `UPDATE hub_inventory SET available_quantity = 0 WHERE hub_id = $1 AND product_id = $2`,
+            `UPDATE inventory SET quantity = 0 WHERE hub_id = $1 AND product_id = $2`,
             [busyHub.hub_id, popularProduct.product_id]
         );
         await client.query(
@@ -203,7 +205,7 @@ const seedDatabase = async () => {
     console.log(`🌱 Creating ${ORDER_COUNT} orders and related data...`);
     for (let i = 0; i < ORDER_COUNT; i++) {
       const hub = getRandom(activeHubs.slice(0, -1)); // Only order from non-empty, active hubs
-      const inventoryRes = await client.query('SELECT * FROM hub_inventory WHERE hub_id = $1 AND available_quantity > 0', [hub.hub_id]);
+      const inventoryRes = await client.query('SELECT * FROM inventory WHERE hub_id = $1 AND quantity > 0', [hub.hub_id]);
       if (inventoryRes.rows.length === 0) continue;
       
       const customer = getRandom(customers);
