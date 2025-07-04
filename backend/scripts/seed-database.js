@@ -119,10 +119,13 @@ const seedDatabase = async () => {
         if (i === hubOwners.length - 1) status = 'inactive'; // Last hub is inactive
         if (i === hubOwners.length - 2) status = 'crisis_mode'; // Second to last is in crisis mode
 
+        const hubName = `${faker.company.name()} Hub`;
+        const description = `A community hub serving ${faker.location.city()} area with ${faker.commerce.department()} supplies and local products.`;
+        
         const res = await client.query(
-            `INSERT INTO hubs (hub_id, owner_id, name, address, location, capacity_m3, status, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8, NOW(), NOW()) RETURNING *`,
-            [faker.string.uuid(), hubOwners[i].user_id, `${faker.company.name()} Hub`, faker.location.streetAddress(true), faker.location.longitude(), faker.location.latitude(), faker.number.int({ min: 20, max: 100 }), status]
+            `INSERT INTO hubs (hub_id, owner_id, name, address, location, capacity_m3, description, status, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8, $9, NOW(), NOW()) RETURNING *`,
+            [faker.string.uuid(), hubOwners[i].user_id, hubName, faker.location.streetAddress(true), faker.location.longitude(), faker.location.latitude(), faker.number.int({ min: 20, max: 100 }), description, status]
         );
         createdHubs.push(res.rows[0]);
     }
