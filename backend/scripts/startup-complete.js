@@ -110,20 +110,12 @@ async function setupDatabase() {
     // Test database connection
     await runCommand('node scripts/test-connection.js', 'Testing database connection');
     
-    // Run migrations
-    logInfo('Running database migrations...');
-    const migrationsDir = path.join(__dirname, '..', 'migrations');
-    if (fs.existsSync(migrationsDir)) {
-      const migrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.js'));
-      logInfo(`Found ${migrations.length} migration files`);
-      
-      // For simplicity, we'll use our custom migrate script if it exists
-      if (fs.existsSync(path.join(__dirname, 'migrate.js'))) {
-        await runCommand('node scripts/migrate.js', 'Running migrations');
-      } else {
-        logInfo('Manual migration required - database models will be synced automatically');
-      }
-    }
+    // Instead of manual migrations, use Sequelize sync
+    logInfo('Syncing database models (automatic table creation)...');
+    
+    const { syncDatabase } = require('../src/models');
+    await syncDatabase();
+    logSuccess('Database models synchronized successfully');
     
     // Seed database
     await runCommand('node scripts/seed-database.js', 'Seeding database with test data');

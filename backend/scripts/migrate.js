@@ -45,7 +45,11 @@ async function runMigrations() {
         const migration = require(migrationPath);
         
         if (migration.up && typeof migration.up === 'function') {
-          await migration.up();
+          // Import Sequelize and get QueryInterface
+          const { Sequelize } = require('sequelize');
+          const { sequelize } = require('../src/models');
+          
+          await migration.up(sequelize.getQueryInterface(), Sequelize);
           logger.info(`✅ Migration ${file} completed successfully`);
         } else {
           logger.warn(`⚠️ Migration ${file} has no 'up' function`);
