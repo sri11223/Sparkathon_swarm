@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const NotificationController = require('../controllers/notificationController');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { validateRequest, notificationValidation } = require('../middleware/validation');
 
 // Public routes (none for notifications)
 
 // Protected routes - require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 /**
  * @route GET /api/notifications
