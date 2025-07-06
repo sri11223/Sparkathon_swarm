@@ -13,7 +13,7 @@ const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
   host: dbHost,
   port: dbPort,
   dialect: 'postgres',
-  logging: process.env.NODE_ENV === 'development' ? logger.info : false,
+  logging: false,
   pool: {
     max: 5,
     min: 0,
@@ -30,11 +30,6 @@ const connectDB = async () => {
   try {
     await sequelize.authenticate();
     logger.info('✅ Database connection established successfully');
-    
-    // Initialize models and associations
-    const { syncDatabase } = require('../models');
-    await syncDatabase();
-    
   } catch (error) {
     logger.error('❌ Unable to connect to the database:', error);
     throw error;

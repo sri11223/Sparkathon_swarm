@@ -31,7 +31,7 @@ const seedDatabase = async () => {
 
     console.log('🌪️ Wiping all existing data...');
     const tables = [
-      'community_leaderboards', 'safety_reports', 'community_earnings', 'smart_load_optimizations', 
+      'community_leaderboards', 'safety_reports', 'community_earnings', 'smartload_optimizations', 
       'push_notification_tokens', 'community_challenges', 'emergency_hubs', 'crisis_events', 'community_hubs',
       'analytics_events', 'user_ratings', 'ai_optimization_logs', 'order_vouchers', 
       'vouchers', 'system_logs', 'notifications', 'stockout_events', 
@@ -196,7 +196,7 @@ const seedDatabase = async () => {
         
         const stockoutOrderRes = await client.query(
             `INSERT INTO orders (order_id, customer_id, hub_id, delivery_address, delivery_latitude, delivery_longitude, status, order_type, total_price, created_at, updated_at) 
-             VALUES ($1, $2, $3, $4, $5, $6, 'completed', 'drive_thru_pickup', $7, NOW(), NOW()) RETURNING *`,
+             VALUES ($1, $2, $3, $4, $5, $6, 'delivered', 'drive-thru', $7, NOW(), NOW()) RETURNING *`,
             [faker.string.uuid(), getRandom(customers).user_id, busyHub.hub_id, 
              faker.location.streetAddress(true), faker.location.latitude(), faker.location.longitude(),
              (stockoutQuantity * parseFloat(popularProduct.price)).toFixed(2)]
@@ -212,7 +212,7 @@ const seedDatabase = async () => {
             [busyHub.hub_id, popularProduct.product_id]
         );
         await client.query(
-            `INSERT INTO stockout_events (stockout_id, hub_id, product_id, stockout_time) VALUES ($1, $2, $3, NOW())`,
+            `INSERT INTO stockout_events (stockout_id, hub_id, product_id, stockout_time, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW(), NOW())`,
             [faker.string.uuid(), busyHub.hub_id, popularProduct.product_id]
         );
         console.log('✅ Stockout event created and logged.');
@@ -232,14 +232,14 @@ const seedDatabase = async () => {
       
       const orderRes = await client.query(
         `INSERT INTO orders (order_id, customer_id, hub_id, delivery_address, delivery_latitude, delivery_longitude, status, order_type, total_price, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, 'completed', 'delivery', 100.0, NOW(), NOW()) RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, 'delivered', 'delivery', 100.0, NOW(), NOW()) RETURNING *`,
         [faker.string.uuid(), customer.user_id, hub.hub_id, deliveryAddress, deliveryLat, deliveryLng]
       );
       const order = orderRes.rows[0];
 
       // Create a notification for the order
       await client.query(
-        `INSERT INTO notifications (notification_id, user_id, title, body, type, related_entity_id) VALUES ($1, $2, $3, $4, 'order_status', $5)`,
+        `INSERT INTO notifications (notification_id, user_id, title, body, type, related_entity_id, created_at, updated_at) VALUES ($1, $2, $3, $4, 'order_status', $5, NOW(), NOW())`,
         [faker.string.uuid(), customer.user_id, 'Order Confirmed!', `Your order #${order.order_id.slice(0,8)} has been confirmed.`, order.order_id]
       );
     }
@@ -262,14 +262,16 @@ const seedDatabase = async () => {
     let createdCommunityHubs = [];
     for (let i = 0; i < 3; i++) {
       const hubOwner = getRandom(hubOwners);
+      const hub = getRandom(activeHubs); // Link to an existing hub
       const communityHubRes = await client.query(
         `INSERT INTO community_hubs (
-          hub_id, name, description, category, location, operating_hours, 
+          community_hub_id, hub_id, community_name, description, category, location, operating_hours, 
           contact_info, amenities, community_features, safety_rating, 
           hub_owner_id, status, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()) RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()) RETURNING *`,
         [
-          faker.string.uuid(),
+          faker.string.uuid(), // community_hub_id (PK)
+          hub.hub_id, // hub_id (FK)
           `${faker.company.name()} Community Hub`,
           `A vibrant community space offering ${faker.commerce.department()} services and local marketplace`,
           getRandom(['local_marketplace', 'emergency_center', 'social_hub', 'skill_sharing']),
@@ -315,31 +317,29 @@ const seedDatabase = async () => {
     console.log('🌱 Creating crisis events...');
     const crisisEventRes = await client.query(
       `INSERT INTO crisis_events (
-        crisis_id, title, description, crisis_type, severity_level, 
-        affected_areas, emergency_contacts, resource_needs, response_plan, 
-        status, activation_time, estimated_duration, created_by, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()) RETURNING *`,
+        crisis_event_id, event_name, event_type, severity_level, status, affected_areas, description, emergency_supplies_needed, volunteer_requirements, coordination_center, estimated_duration, priority_level, created_by, activated_at, resolved_at, public_information, response_metrics, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()) RETURNING *`,
       [
         faker.string.uuid(),
-        'Simulated Supply Chain Disruption',
-        'A simulated crisis event to test emergency response capabilities and resource coordination',
-        'supply_shortage',
-        'medium',
+        'Simulated Supply Chain Disruption', // event_name
+        'supply_shortage', // event_type
+        'medium', // severity_level
+        'active', // status
         JSON.stringify([
           { area: faker.location.city(), severity: 'high' },
           { area: faker.location.city(), severity: 'medium' }
         ]),
-        JSON.stringify({
-          emergency_coordinator: faker.phone.number(),
-          local_authorities: faker.phone.number(),
-          red_cross: '1-800-RED-CROSS'
-        }),
-        JSON.stringify(['food_supplies', 'medical_supplies', 'transportation', 'volunteers']),
-        'Coordinate with local hubs to distribute emergency supplies and maintain communication channels',
-        'active',
-        new Date(),
-        24, // 24 hours
-        adminUser.user_id
+        'A simulated crisis event to test emergency response capabilities and resource coordination', // description
+        JSON.stringify(['food_supplies', 'medical_supplies', 'transportation', 'volunteers']), // emergency_supplies_needed
+        JSON.stringify({ roles: ['volunteer', 'coordinator'] }), // volunteer_requirements
+        JSON.stringify({ location: faker.location.streetAddress(true) }), // coordination_center
+        '24h', // estimated_duration
+        1, // priority_level
+        adminUser.user_id, // created_by
+        new Date(), // activated_at
+        null, // resolved_at
+        JSON.stringify({ info: 'Public info' }), // public_information
+        JSON.stringify({ metric: 'test' }) // response_metrics
       ]
     );
     const crisisEvent = crisisEventRes.rows[0];
@@ -348,13 +348,13 @@ const seedDatabase = async () => {
     console.log('🌱 Creating emergency hubs...');
     const emergencyHubRes = await client.query(
       `INSERT INTO emergency_hubs (
-        emergency_hub_id, crisis_id, hub_id, emergency_role, capacity, 
+        emergency_hub_id, crisis_event_id, hub_id, emergency_role, capacity, 
         available_resources, volunteer_count, status, contact_person, 
         activation_time, created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()) RETURNING *`,
       [
         faker.string.uuid(),
-        crisisEvent.crisis_id,
+        crisisEvent.crisis_event_id,
         activeHubs[0].hub_id,
         'supply_center',
         JSON.stringify({
@@ -444,7 +444,7 @@ const seedDatabase = async () => {
     console.log('🌱 Creating smart load optimizations...');
     for (const hub of activeHubs.slice(0, 3)) {
       await client.query(
-        `INSERT INTO smart_load_optimizations (
+        `INSERT INTO smartload_optimizations (
           optimization_id, hub_id, optimization_type, input_data, 
           optimization_results, efficiency_metrics, implementation_status, 
           estimated_savings, requested_by, created_at, updated_at

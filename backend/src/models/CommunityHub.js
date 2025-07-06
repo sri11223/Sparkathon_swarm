@@ -30,7 +30,7 @@ module.exports = (sequelize) => {
     },
     community_leader_id: {
       type: DataTypes.UUID,
-      allowNull: false,
+      allowNull: true,
     },
     community_name: {
       type: DataTypes.STRING,

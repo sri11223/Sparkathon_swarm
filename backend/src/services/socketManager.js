@@ -27,7 +27,9 @@ class SocketManager {
 
     // --- REDIS CONFIGURATION ---
     logger.info('🔌 Attempting to connect to Redis for Socket.IO adapter...');
-    const pubClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
+    const redisHost = process.env.REDIS_HOST || 'redis';
+    const redisPort = process.env.REDIS_PORT || 6379;
+    const pubClient = createClient({ url: `redis://${redisHost}:${redisPort}` });
     const subClient = pubClient.duplicate();
 
     await Promise.all([pubClient.connect(), subClient.connect()]);

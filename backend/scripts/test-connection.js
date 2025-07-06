@@ -24,11 +24,16 @@ const testConnection = async () => {
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
       { type: sequelize.QueryTypes.SELECT }
     );
-    
     console.log('📋 Database tables:');
-    tables.forEach(table => {
-      console.log(`   - ${table.table_name}`);
-    });
+    if (tables.length > 0) {
+      console.log(tables);
+      tables.forEach(table => {
+        // Print the first property value of each table object
+        console.log(`   - ${Object.values(table)[0]}`);
+      });
+    } else {
+      console.log('   (No tables found)');
+    }
     
     console.log('');
     console.log('🎉 Database is ready for use!');

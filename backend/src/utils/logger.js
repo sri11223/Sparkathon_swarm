@@ -1,6 +1,18 @@
 const winston = require('winston');
 const path = require('path');
 
+// Helper to safely stringify objects with circular references
+function safeStringify(obj, indent = 2) {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, function(key, value) {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[Circular]';
+      seen.add(value);
+    }
+    return value;
+  }, indent);
+}
+
 // Define log format
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -21,7 +33,7 @@ const logger = winston.createLogger({
         winston.format.colorize(),
         winston.format.simple(),
         winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
+          return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? safeStringify(meta, 2) : ''}`;
         })
       )
     }),

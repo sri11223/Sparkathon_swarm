@@ -1,4 +1,12 @@
 const { sequelize } = require('../src/models');
+const { Umzug, SequelizeStorage } = require('umzug');
+
+const umzug = new Umzug({
+  migrations: { glob: 'migrations/*.js' },
+  context: sequelize.getQueryInterface(),
+  storage: new SequelizeStorage({ sequelize }),
+  logger: console,
+});
 
 const resetDatabase = async () => {
   try {
@@ -9,9 +17,13 @@ const resetDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection established');
     
-    // Drop and recreate all tables
-    await sequelize.sync({ force: true });
-    console.log('✅ All tables dropped and recreated');
+    // Drop all tables
+    await sequelize.drop();
+    console.log('✅ All tables dropped');
+
+    // Run all migrations
+    await umzug.up();
+    console.log('✅ All migrations executed');
     
     console.log('🎉 Database reset completed!');
     console.log('');

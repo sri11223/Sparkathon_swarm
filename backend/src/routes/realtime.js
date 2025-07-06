@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const RealtimeController = require('../controllers/realtimeController');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { body, param } = require('express-validator');
 const { handleValidationErrors } = require('../middleware/validation');
 
 // All real-time routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 /**
  * @route POST /api/realtime/join-room

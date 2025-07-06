@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const NotificationController = require('../controllers/notificationController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { validateRequest, notificationValidation } = require('../middleware/validation');
 
 // Public routes (none for notifications)
@@ -29,7 +29,7 @@ router.get('/preferences', NotificationController.getNotificationPreferences);
  * @access Private
  */
 router.put('/preferences', 
-  validateRequest(notificationValidation.updatePreferences),
+  ...notificationValidation.updatePreferences,
   NotificationController.updateNotificationPreferences
 );
 
@@ -61,8 +61,8 @@ router.delete('/:id', NotificationController.deleteNotification);
  * @access Private (Admin only)
  */
 router.post('/send',
-  requireRole(['admin']),
-  validateRequest(notificationValidation.sendNotification),
+  authorize('admin'),
+  ...notificationValidation.sendNotification,
   NotificationController.sendNotification
 );
 
@@ -72,8 +72,8 @@ router.post('/send',
  * @access Private (Admin only)
  */
 router.post('/bulk',
-  requireRole(['admin']),
-  validateRequest(notificationValidation.sendBulkNotification),
+  authorize('admin'),
+  ...notificationValidation.sendBulkNotification,
   NotificationController.sendBulkNotifications
 );
 
@@ -83,8 +83,8 @@ router.post('/bulk',
  * @access Private (Admin only)
  */
 router.post('/emergency',
-  requireRole(['admin']),
-  validateRequest(notificationValidation.sendEmergencyNotification),
+  authorize('admin'),
+  ...notificationValidation.sendEmergencyNotification,
   NotificationController.sendEmergencyNotification
 );
 

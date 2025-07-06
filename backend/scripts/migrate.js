@@ -11,6 +11,22 @@ const path = require('path');
 const { connectDB } = require('../src/config/database');
 const logger = require('../src/utils/logger');
 
+const { Sequelize } = require('sequelize');
+const { sequelize } = require('../src/models');
+
+// Get the SequelizeMeta model
+const SequelizeMeta = sequelize.define('SequelizeMeta', {
+  name: {
+    type: Sequelize.STRING,
+    allowNull: false,
+    unique: true,
+    primaryKey: true,
+  },
+}, {
+  tableName: 'SequelizeMeta',
+  timestamps: false,
+});
+
 async function runMigrations() {
   try {
     // Connect to database
@@ -36,8 +52,18 @@ async function runMigrations() {
 
     logger.info(`Found ${migrationFiles.length} migration files`);
 
+    // Get all completed migrations
+    const completedMigrations = (await SequelizeMeta.findAll({
+      attributes: ['name'],
+      raw: true,
+    })).map(m => m.name);
+
     // Run each migration
     for (const file of migrationFiles) {
+      if (completedMigrations.includes(file)) {
+        logger.info(`Skipping already completed migration: ${file}`);
+        continue;
+      }
       try {
         logger.info(`Running migration: ${file}`);
         
@@ -45,11 +71,8 @@ async function runMigrations() {
         const migration = require(migrationPath);
         
         if (migration.up && typeof migration.up === 'function') {
-          // Import Sequelize and get QueryInterface
-          const { Sequelize } = require('sequelize');
-          const { sequelize } = require('../src/models');
-          
           await migration.up(sequelize.getQueryInterface(), Sequelize);
+          await SequelizeMeta.create({ name: file });
           logger.info(`✅ Migration ${file} completed successfully`);
         } else {
           logger.warn(`⚠️ Migration ${file} has no 'up' function`);
