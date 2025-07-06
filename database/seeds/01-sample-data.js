@@ -1,4 +1,4 @@
-const { User, Hub, Product, Inventory } = require('../../backend/src/models');
+const { User, Hub, Product, Inventory, Order, OrderItem, Delivery, CommunityHub, CrisisEvent, EmergencyHub } = require('../../backend/src/models');
 const bcrypt = require('bcryptjs');
 const logger = require('../../backend/src/utils/logger');
 
@@ -7,23 +7,27 @@ const seedDatabase = async () => {
     console.log('🌱 Starting database seeding...');
 
     // Create Admin User
+    const hashedPassword = await bcrypt.hash('Admin123!@#', 10);
     const adminUser = await User.create({
       email: 'admin@swarmfill.com',
-      password_hash: 'Admin123!@#',
-      full_name: 'System Administrator',
-      user_type: 'admin',
+      password_hash: hashedPassword,
+      first_name: 'System',
+      last_name: 'Administrator',
+      role: 'admin',
       is_verified: true,
       is_active: true
     });
     console.log('✅ Admin user created');
 
     // Create Sample Hub Owners
+    const hubOwnerPassword = await bcrypt.hash('HubOwner123!', 10);
     const hubOwner1 = await User.create({
       email: 'owner1@example.com',
-      password_hash: 'HubOwner123!',
-      full_name: 'John Doe',
+      password_hash: hubOwnerPassword,
+      first_name: 'John',
+      last_name: 'Doe',
+      role: 'hub_owner',
       phone: '+1234567890',
-      user_type: 'hubowner',
       address: '123 Main St, New York, NY 10001',
       latitude: 40.7589,
       longitude: -73.9851,
@@ -33,10 +37,11 @@ const seedDatabase = async () => {
 
     const hubOwner2 = await User.create({
       email: 'owner2@example.com',
-      password_hash: 'HubOwner123!',
-      full_name: 'Jane Smith',
+      password_hash: hubOwnerPassword,
+      first_name: 'Jane',
+      last_name: 'Smith',
+      role: 'hub_owner',
       phone: '+1234567891',
-      user_type: 'hubowner',
       address: '456 Broadway, New York, NY 10013',
       latitude: 40.7505,
       longitude: -73.9934,
@@ -46,17 +51,17 @@ const seedDatabase = async () => {
     console.log('✅ Hub owners created');
 
     // Create Sample Couriers
+    const courierPassword = await bcrypt.hash('Courier123!', 10);
     const courier1 = await User.create({
       email: 'courier1@example.com',
-      password_hash: 'Courier123!',
-      full_name: 'Mike Johnson',
+      password_hash: courierPassword,
+      first_name: 'Mike',
+      last_name: 'Johnson',
+      role: 'courier',
       phone: '+1234567892',
-      user_type: 'courier',
       address: '789 Brooklyn Ave, Brooklyn, NY 11201',
       latitude: 40.6892,
       longitude: -73.9442,
-      vehicle_type: 'bike',
-      license_number: 'DL123456789',
       is_available: true,
       is_verified: true,
       is_active: true
@@ -64,15 +69,14 @@ const seedDatabase = async () => {
 
     const courier2 = await User.create({
       email: 'courier2@example.com',
-      password_hash: 'Courier123!',
-      full_name: 'Sarah Wilson',
+      password_hash: courierPassword,
+      first_name: 'Sarah',
+      last_name: 'Wilson',
+      role: 'courier',
       phone: '+1234567893',
-      user_type: 'courier',
       address: '321 Queens Blvd, Queens, NY 11375',
       latitude: 40.7282,
       longitude: -73.7949,
-      vehicle_type: 'car',
-      license_number: 'DL987654321',
       is_available: true,
       is_verified: true,
       is_active: true
@@ -80,12 +84,14 @@ const seedDatabase = async () => {
     console.log('✅ Couriers created');
 
     // Create Sample Customers
+    const customerPassword = await bcrypt.hash('Customer123!', 10);
     const customer1 = await User.create({
       email: 'customer1@example.com',
-      password_hash: 'Customer123!',
-      full_name: 'Alice Brown',
+      password_hash: customerPassword,
+      first_name: 'Alice',
+      last_name: 'Brown',
+      role: 'customer',
       phone: '+1234567894',
-      user_type: 'customer',
       address: '555 Park Ave, New York, NY 10065',
       latitude: 40.7614,
       longitude: -73.9776,
@@ -95,10 +101,11 @@ const seedDatabase = async () => {
 
     const customer2 = await User.create({
       email: 'customer2@example.com',
-      password_hash: 'Customer123!',
-      full_name: 'Bob Davis',
+      password_hash: customerPassword,
+      first_name: 'Bob',
+      last_name: 'Davis',
+      role: 'customer',
       phone: '+1234567895',
-      user_type: 'customer',
       address: '777 Fifth Ave, New York, NY 10022',
       latitude: 40.7505,
       longitude: -73.9795,
@@ -109,7 +116,7 @@ const seedDatabase = async () => {
 
     // Create Sample Hubs
     const hub1 = await Hub.create({
-      owner_id: hubOwner1.id,
+      owner_id: hubOwner1.user_id,
       name: 'Downtown Grocery Hub',
       description: 'Fresh groceries and daily essentials in the heart of Manhattan',
       address: '123 Main St, New York, NY 10001',
@@ -125,12 +132,12 @@ const seedDatabase = async () => {
         saturday: { open: '09:00', close: '23:00' },
         sunday: { open: '09:00', close: '21:00' }
       },
-      hub_type: 'retail',
-      is_active: true
+      capacity_m3: 100,
+      status: 'active'
     });
 
     const hub2 = await Hub.create({
-      owner_id: hubOwner2.id,
+      owner_id: hubOwner2.user_id,
       name: 'SoHo Electronics Store',
       description: 'Latest electronics and gadgets',
       address: '456 Broadway, New York, NY 10013',
@@ -146,12 +153,12 @@ const seedDatabase = async () => {
         saturday: { open: '10:00', close: '21:00' },
         sunday: { open: '11:00', close: '19:00' }
       },
-      hub_type: 'retail',
-      is_active: true
+      capacity_m3: 150,
+      status: 'active'
     });
 
     const hub3 = await Hub.create({
-      owner_id: hubOwner1.id,
+      owner_id: hubOwner1.user_id,
       name: 'Central Warehouse',
       description: 'Main distribution center for bulk items',
       address: '999 Industrial Way, Long Island City, NY 11101',
@@ -167,8 +174,8 @@ const seedDatabase = async () => {
         saturday: { open: '08:00', close: '16:00' },
         sunday: { closed: true }
       },
-      hub_type: 'warehouse',
-      is_active: true
+      capacity_m3: 1000,
+      status: 'active'
     });
     console.log('✅ Hubs created');
 
@@ -277,19 +284,79 @@ const seedDatabase = async () => {
     await Inventory.bulkCreate(inventoryItems);
     console.log('✅ Inventory created');
 
-    console.log('🎉 Database seeding completed successfully!');
-    console.log('');
-    console.log('📊 Summary:');
-    console.log(`- 1 Admin user: admin@swarmfill.com (password: Admin123!@#)`);
-    console.log(`- 2 Hub owners: owner1@example.com, owner2@example.com (password: HubOwner123!)`);
-    console.log(`- 2 Couriers: courier1@example.com, courier2@example.com (password: Courier123!)`);
-    console.log(`- 2 Customers: customer1@example.com, customer2@example.com (password: Customer123!)`);
-    console.log(`- 3 Hubs: Downtown Grocery, SoHo Electronics, Central Warehouse`);
-    console.log(`- 6 Products: Various groceries and electronics`);
-    console.log(`- Multiple inventory entries across all hubs`);
-    console.log('');
-    console.log('🚀 You can now start the backend server!');
+    // Create Sample Orders
+    const order1 = await Order.create({
+      customer_id: customer1.id,
+      hub_id: hub1.id,
+      total_price: 8.48,
+      status: 'delivered',
+      delivery_address: '555 Park Ave, New York, NY 10065',
+      delivery_latitude: 40.7614,
+      delivery_longitude: -73.9776
+    });
 
+    await OrderItem.bulkCreate([
+      { order_id: order1.id, product_id: products[0].id, quantity: 1, price: 3.49 },
+      { order_id: order1.id, product_id: products[1].id, quantity: 1, price: 4.99 }
+    ]);
+
+    await Delivery.create({
+      order_id: order1.id,
+      courier_id: courier1.id,
+      status: 'completed',
+      pickup_time: new Date(),
+      delivery_time: new Date()
+    });
+
+    const order2 = await Order.create({
+      customer_id: customer2.id,
+      hub_id: hub2.id,
+      total_price: 1429.98,
+      status: 'in_transit',
+      delivery_address: '777 Fifth Ave, New York, NY 10022',
+      delivery_latitude: 40.7505,
+      delivery_longitude: -73.9795
+    });
+
+    await OrderItem.bulkCreate([
+      { order_id: order2.id, product_id: products[2].id, quantity: 1, price: 1099.99 },
+      { order_id: order2.id, product_id: products[4].id, quantity: 1, price: 329.99 }
+    ]);
+
+    await Delivery.create({
+      order_id: order2.id,
+      courier_id: courier2.id,
+      status: 'in_progress',
+      pickup_time: new Date()
+    });
+    console.log('✅ Orders and Deliveries created');
+
+    // Create Community Hub
+    const communityHub = await CommunityHub.create({
+      hub_id: hub1.id,
+      community_name: 'Downtown Community',
+      community_leader_id: hubOwner1.id
+    });
+    console.log('✅ Community Hub created');
+
+    // Create Crisis Event
+    const crisisEvent = await CrisisEvent.create({
+      title: 'Hurricane Sandy',
+      description: 'A major hurricane is approaching the city.',
+      crisis_type: 'natural_disaster',
+      severity_level: 'high',
+      created_by: adminUser.id
+    });
+
+    await EmergencyHub.create({
+      hub_id: hub3.id,
+      crisis_event_id: crisisEvent.id,
+      emergency_role: 'supply_center',
+      volunteer_coordinator_id: hubOwner1.id
+    });
+    console.log('✅ Crisis Event and Emergency Hub created');
+
+    console.log('🎉 Database seeding completed successfully!');
   } catch (error) {
     console.error('❌ Database seeding failed:', error);
     throw error;

@@ -105,22 +105,22 @@ services:
       retries: 3
 
   # Web Dashboard (for development)
-  web-dashboard:
-    build:
-      context: ../frontend/admin-web-dashboard
-      dockerfile: ../../deployment/docker/Dockerfile.web
-    container_name: swarmfill-web
-    ports:
-      - "3001:3000"
-    environment:
-      REACT_APP_API_URL: http://localhost:3000/api
-      REACT_APP_AI_API_URL: http://localhost:5000/api
-      REACT_APP_ENV: development
-    depends_on:
-      - backend
-      - ai-services
-    networks:
-      - swarmfill-network
+  # web-dashboard:
+  #   build:
+  #     context: ../../frontend/admin-web-dashboard
+  #     dockerfile: ../../deployment/docker/Dockerfile.web
+  #   container_name: swarmfill-web
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     REACT_APP_API_URL: http://localhost:3000/api
+  #     REACT_APP_AI_API_URL: http://localhost:5000/api
+  #     REACT_APP_ENV: development
+  #   depends_on:
+  #     - backend
+  #     - ai-services
+  #   networks:
+  #     - swarmfill-network
 
 volumes:
   postgres_data:

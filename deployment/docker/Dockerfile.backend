@@ -2,16 +2,12 @@
 FROM node:20-alpine AS backend-builder
 
 # Set working directory
-WORKDIR /app/backend
+WORKDIR /app
 
-# Copy package files
-COPY backend/package*.json ./
+COPY backend .
 
-# Install dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
-# Copy source code
-COPY backend/src ./src
 
 # Backend runtime
 FROM node:20-alpine AS backend
