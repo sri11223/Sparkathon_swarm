@@ -1,7 +1,7 @@
 # SwarmFill Network + SmartLoad AI
 ### Walmart Sparkathon 2025 Submission
 
-[![Competition](https://img.shields.io/badge/Competition-Walmart%20Sparkathon%202025-blue)](https://github.com/sri11223/Sparkathon_swarm)
+
 [![Deadline](https://img.shields.io/badge/Deadline-July%2014%2C%202025-red)](https://github.com/sri11223/Sparkathon_swarm)
 [![Status](https://img.shields.io/badge/Status-In%20Development-yellow)](https://github.com/sri11223/Sparkathon_swarm)
 
@@ -325,4 +325,4 @@ This project is developed for Walmart Sparkathon 2025 competition.
 
 ---
 
-*"Transforming supply chains through community empowerment and AI optimization"* 🚀
+*"Transforming supply chains through community empowerment and AI optimization"* 
