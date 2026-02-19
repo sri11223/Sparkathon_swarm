@@ -30,11 +30,8 @@
 - 🛡️ **Enhanced crisis resilience** during natural disasters
 - 💰 **Direct community economic empowerment**
 - 📈 **Over $100M in potential annual cost savings** for Walmart and a **new revenue stream** from hyper-local commerce.
-
 ---
-
 ## 👥 User Roles & Mobile Apps
-
 ### 📱 Customer App
 **Features:**
 - **Hyper-Local Browsing:** Browse items available in nearby hubs, curated based on local preferences.
@@ -200,9 +197,7 @@ npm install -g expo-cli
 npm install
 expo start
 ```
-
 ---
-
 ## 📊 SmartLoad AI Performance Metrics
 
 ### **Warehouse Optimization**
@@ -219,9 +214,7 @@ expo start
 - ✅ **38% time savings**
 - ✅ **25% cost reduction**
 - ✅ **Real-time traffic integration**
-
 ---
-
 ## 📱 API Documentation
 
 ### **Core Endpoints**
@@ -243,18 +236,14 @@ delivery_assigned - Courier assignment
 hub_capacity_alert - Storage capacity warning
 crisis_mode_activated - Emergency mode trigger
 ```
-
 ---
-
 ## 🎯 Competition Strategy
-
 ### **Demo Video Structure (5 minutes)**
 1. **Problem Statement** (60s): Last-mile costs, crisis vulnerability
 2. **Solution Overview** (90s): SwarmFill + SmartLoad integration
 3. **Technical Innovation** (120s): AI algorithms, community platform
 4. **Real-World Impact** (90s): Economic, social, environmental benefits
 5. **Live Demonstration** (60s): Working prototype showcase
-
 ### **Competitive Advantages**
 - ✅ **Complete working system** (not just concepts)
 - ✅ **Community validation** with real user feedback
